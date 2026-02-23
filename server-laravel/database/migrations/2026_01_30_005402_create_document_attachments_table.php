@@ -1,0 +1,68 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('document_attachments', function (Blueprint $table) {
+            // Primary Key
+            $table->id(); // auto-increment integer
+
+            // References
+            $table->string('document_no', 50);
+            $table->string('transaction_no', 50);
+
+            $table->foreign('document_no')
+                ->references('document_no')
+                ->on('documents')
+                ->cascadeOnDelete();
+
+            $table->foreign('transaction_no')
+                ->references('transaction_no')
+                ->on('document_transactions')
+                ->cascadeOnDelete();
+
+            // File Information
+            $table->string('file_name', 255);
+            $table->string('file_path', 500);
+            $table->string('mime_type', 100);
+            $table->bigInteger('file_size'); // in bytes
+
+            // Attachment Type
+            $table->enum('attachment_type', ['main', 'attachment'])->default('attachment');
+
+            // Office Information
+            $table->string('office_id', 50);
+            $table->foreign('office_id')
+                ->references('id')
+                ->on('office_libraries')
+                ->onDelete('cascade');
+            $table->string('office_name', 150);
+
+            // Creator Information
+            $table->foreignUuid('created_by_id')
+                ->references('id')
+                ->on('users')
+                ->onDelete('cascade');
+            $table->string('created_by_name', 150);
+
+            // Timestamps
+            $table->timestamps(); // includes created_at and updated_at
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('document_attachments');
+    }
+};

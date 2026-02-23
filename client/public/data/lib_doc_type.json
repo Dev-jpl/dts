@@ -1,0 +1,752 @@
+[
+  {
+    "type_id": "04dc5eb5-4d79-48e1-8427-685811f78c30",
+    "code": "MOA",
+    "type": "Memorandum of Agreement",
+    "date_created": "2020-02-19 06:30:17"
+  },
+  {
+    "type_id": "04dc5eb5-4d79-48e1-8427-685811f78c41",
+    "code": "LR",
+    "type": "Liquidation Report",
+    "date_created": "2020-02-19 06:30:17"
+  },
+  {
+    "type_id": "0bf64491-f175-43df-b4ea-7718d7505bcd",
+    "code": "BR",
+    "type": "BAC Resolution",
+    "date_created": "2022-02-23 08:14:43"
+  },
+  {
+    "type_id": "0bf64491-f17f-43df-b4ea-7718d7505bcf",
+    "code": "RS",
+    "type": "Resolution",
+    "date_created": "2022-02-23 08:14:43"
+  },
+  {
+    "type_id": "12392ebb-831b-4a17-b101-7166d6b233c5",
+    "code": "RF",
+    "type": "Registration Form",
+    "date_created": "2022-02-15 04:20:15"
+  },
+  {
+    "type_id": "14294643-27ef-4dc1-9d94-047170643a75",
+    "code": "OPC",
+    "type": "Office Performance Commitment and Review ",
+    "date_created": "2022-02-15 04:21:54"
+  },
+  {
+    "type_id": "14546b13-6d7d-4377-9bb1-42cd6241bb91",
+    "code": "AR",
+    "type": "Activity Report",
+    "date_created": "2019-11-15 01:23:05"
+  },
+  {
+    "type_id": "14546b13-6d7d-4377-aaaa-42cd6241bb91",
+    "code": "APL",
+    "type": "Activity Proposal",
+    "date_created": "2019-11-15 01:23:05"
+  },
+  {
+    "type_id": "14546b13-6d7d-4377-fbb1-42cd6241bb1f",
+    "code": "JAO",
+    "type": "Joint Administrative Order",
+    "date_created": "2019-11-15 01:23:05"
+  },
+  {
+    "type_id": "14546g13-6d7d-1377-9bb1-42cd6241bb91",
+    "code": "MIN",
+    "type": "Minutes of Meeting",
+    "date_created": "2019-11-15 01:23:05"
+  },
+  {
+    "type_id": "145g6b13-6d7d-4312-9bb1-42cd6241bb91",
+    "code": "FBR",
+    "type": "Feedback Report",
+    "date_created": "2019-11-15 01:23:05"
+  },
+  {
+    "type_id": "14dc5eb5-4d79-48e1-8427-185811f78c41",
+    "code": "MAF",
+    "type": "Modification Advise Form",
+    "date_created": "2020-02-19 06:30:17"
+  },
+  {
+    "type_id": "14dc5eb5-4d79-48e1-8427-185811f78c42",
+    "code": "UPSA",
+    "type": "Advise for use of PS Allotment",
+    "date_created": "2020-02-19 06:30:17"
+  },
+  {
+    "type_id": "14dc5eb5-4d79-48e1-8427-685811f78c40",
+    "code": "ASA",
+    "type": "Advise of Sub-allotment",
+    "date_created": "2020-02-19 06:30:17"
+  },
+  {
+    "type_id": "15b45b7f-f531-4a4b-a7c3-7b411eedc696",
+    "code": "CRT",
+    "type": "Certification",
+    "date_created": "2022-02-22 08:43:36"
+  },
+  {
+    "type_id": "18ec4377-3e08-49a2-8dd7-bfcda4c960cd",
+    "code": "TO",
+    "type": "Travel Order",
+    "date_created": "2020-02-19 06:22:36"
+  },
+  {
+    "type_id": "1947dad4-e0bb-4a43-95a8-c9863de1b421",
+    "code": "PPMP",
+    "type": "PROJECT PROCUREMENT MANAGEMENT PLAN",
+    "date_created": "2022-02-15 04:19:19"
+  },
+  {
+    "type_id": "1ade3f31-8723-4386-a35f-1a0539306bde",
+    "code": "DO",
+    "type": "Department Order",
+    "date_created": "2019-11-15 01:24:02"
+  },
+  {
+    "type_id": "1hf64491-f17f-43df-b4ea-7718d7505bcf",
+    "code": "SR",
+    "type": "SBAC Resolution",
+    "date_created": "2022-02-23 08:14:43"
+  },
+  {
+    "type_id": "22ec4377-3e08-49a2-8dd7-bfcda4c96012",
+    "code": "PTO",
+    "type": "PAL Travel Order",
+    "date_created": "2020-02-19 06:22:36"
+  },
+  {
+    "type_id": "231198bc-57e0-4bc1-a1a2-c38d7b3bf727",
+    "code": "GAO",
+    "type": "General Administrative Order",
+    "date_created": "2022-02-15 04:02:23"
+  },
+  {
+    "type_id": "28650a18-0e8a-440f-94ae-6b293846f5e9",
+    "code": "DSA",
+    "type": "Data Sharing Agreement",
+    "date_created": "2022-07-22 05:55:48"
+  },
+  {
+    "type_id": "28b2c149-7366-49f8-ba14-a8ebcb6a5ef8",
+    "code": "MM",
+    "type": "Memorandum",
+    "date_created": "2022-01-20 08:01:38"
+  },
+  {
+    "type_id": "2a34c33e-1d7c-4a74-8e50-5c73967df063",
+    "code": "ORS",
+    "type": "Obligation Request and Status",
+    "date_created": "2020-02-19 06:23:11"
+  },
+  {
+    "type_id": "2a88e281-80b8-471e-90d5-ad47916469e3",
+    "code": "DNA",
+    "type": "Daily Time Records & Accomplishments",
+    "date_created": "2022-02-06 22:48:04"
+  },
+  {
+    "type_id": "2e1f301d-f4d3-456e-ab8c-26120b87fd4f",
+    "code": "IAR",
+    "type": "Inspection and Acceptance Report",
+    "date_created": "2022-02-15 04:08:18"
+  },
+  {
+    "type_id": "4e1fc743-d784-4bce-ae66-98991674b60d",
+    "code": "MOU",
+    "type": "Memorandum of Understanding",
+    "date_created": "2020-02-19 06:32:28"
+  },
+  {
+    "type_id": "51893b51-a03b-4486-a2b4-91f37bede094",
+    "code": "PR",
+    "type": "Purchase Request",
+    "date_created": "2022-02-14 03:04:15"
+  },
+  {
+    "type_id": "53ac1e94-3ea6-427f-b33f-005f1e0f8001",
+    "code": "SASDC",
+    "type": "Statement of Audit Suspensions, Disallowances and Charges",
+    "date_created": "2020-02-19 06:26:32"
+  },
+  {
+    "type_id": "53ac1e94-3ea6-427f-b33f-005f1e0f8002",
+    "code": "ML",
+    "type": "Management Letter",
+    "date_created": "2020-02-19 06:26:32"
+  },
+  {
+    "type_id": "53ac1e94-3ea6-427f-b33f-005f1e0f8003",
+    "code": "CAAR",
+    "type": "Consolidated Annual Audit Report",
+    "date_created": "2020-02-19 06:26:32"
+  },
+  {
+    "type_id": "53ac1e94-3ea6-427f-b33f-005f1e0f8004",
+    "code": "AQ",
+    "type": "Audit Query",
+    "date_created": "2020-02-19 06:26:32"
+  },
+  {
+    "type_id": "53ac1e94-3ea6-427f-b33f-005f1e0f8005",
+    "code": "NS",
+    "type": "Notice of Suspension",
+    "date_created": "2020-02-19 06:26:32"
+  },
+  {
+    "type_id": "53ac1e94-3ea6-427f-b33f-005f1e0f8006",
+    "code": "NOD",
+    "type": "Notice of Disallowance",
+    "date_created": "2020-02-19 06:26:32"
+  },
+  {
+    "type_id": "53ac1e94-3ea6-427f-b33f-005f1e0f8007",
+    "code": "NC",
+    "type": "Notice of Charge",
+    "date_created": "2020-02-19 06:26:32"
+  },
+  {
+    "type_id": "53ac1e94-3ea6-427f-b33f-005f1e0f8008",
+    "code": "NSSDC",
+    "type": "Notice of Settlement of Suspension, Disallowance, Charge",
+    "date_created": "2020-02-19 06:26:32"
+  },
+  {
+    "type_id": "53ac1e94-3ea6-427f-b33f-005f1e0f8009",
+    "code": "COAD",
+    "type": "COA Decisions",
+    "date_created": "2020-02-19 06:26:32"
+  },
+  {
+    "type_id": "53ac1e94-3ea6-427f-b33f-005f1e0f800f",
+    "code": "AP",
+    "type": "Appointment",
+    "date_created": "2020-02-19 06:26:32"
+  },
+  {
+    "type_id": "53ac1e94-3ea6-427f-b33f-005f1e0f8010",
+    "code": "NFD",
+    "type": "Notice of Finality of Decision",
+    "date_created": "2020-02-19 06:26:32"
+  },
+  {
+    "type_id": "53ac1e94-3ea6-427f-b33f-005f1e0f8011",
+    "code": "COADE",
+    "type": "COA Order of Execution",
+    "date_created": "2020-02-19 06:26:32"
+  },
+  {
+    "type_id": "54546b13-6d7d-4377-9bb1-42cd6241ba10",
+    "code": "JF",
+    "type": "Justification",
+    "date_created": "2019-11-15 01:23:05"
+  },
+  {
+    "type_id": "54546b13-6d7d-4377-9bb1-42cd6241ba11",
+    "code": "LO",
+    "type": "Legal Opinion/Review",
+    "date_created": "2019-11-15 01:23:05"
+  },
+  {
+    "type_id": "54546b13-6d7d-4377-9bb1-42cd6241ba12",
+    "code": "MR",
+    "type": "Motion of Reconsideration",
+    "date_created": "2019-11-15 01:23:05"
+  },
+  {
+    "type_id": "54546b13-6d7d-4377-9bb1-42cd6241ba13",
+    "code": "PFI",
+    "type": "Pro Forma Invoice",
+    "date_created": "2019-11-15 01:23:05"
+  },
+  {
+    "type_id": "54546b13-6d7d-4377-9bb1-42cd6241ba14",
+    "code": "RFQ",
+    "type": "Request for Quotation",
+    "date_created": "2019-11-15 01:23:05"
+  },
+  {
+    "type_id": "54546b13-6d7d-4377-9bb1-42cd6241ba15",
+    "code": "SCO",
+    "type": "Show Cause Order",
+    "date_created": "2019-11-15 01:23:05"
+  },
+  {
+    "type_id": "54546b13-6d7d-4377-9bb1-42cd6241ba16",
+    "code": "SBB",
+    "type": "Supplemental Bid Bulletin",
+    "date_created": "2019-11-15 01:23:05"
+  },
+  {
+    "type_id": "54546b13-6d7d-4377-9bb1-42cd6241ba17",
+    "code": "TRF",
+    "type": "Table of Rating Factor",
+    "date_created": "2019-11-15 01:23:05"
+  },
+  {
+    "type_id": "54546b13-6d7d-4377-9bb1-42cd6241ba18",
+    "code": "TS",
+    "type": "Technical Specifications",
+    "date_created": "2019-11-15 01:23:05"
+  },
+  {
+    "type_id": "54546b13-6d7d-4377-9bb1-42cd6241ba19",
+    "code": "TOR",
+    "type": "Terms of Reference",
+    "date_created": "2019-11-15 01:23:05"
+  },
+  {
+    "type_id": "54546b13-6d7d-4377-9bb1-42cd6241ba20",
+    "code": "NP",
+    "type": "Notice to Proceed",
+    "date_created": "2019-11-15 01:23:05"
+  },
+  {
+    "type_id": "54546b13-6d7d-4377-9bb1-42cd6241ba21",
+    "code": "BD",
+    "type": "Bidding Documents",
+    "date_created": "2019-11-15 01:23:05"
+  },
+  {
+    "type_id": "54546b13-6d7d-4377-9bb1-42cd6241baa1",
+    "code": "AB",
+    "type": "Abstract of Bids",
+    "date_created": "2019-11-15 01:23:05"
+  },
+  {
+    "type_id": "54546b13-6d7d-4377-9bb1-42cd6241baa2",
+    "code": "APR",
+    "type": "Agency Procurement Request",
+    "date_created": "2019-11-15 01:23:05"
+  },
+  {
+    "type_id": "54546b13-6d7d-4377-9bb1-42cd6241baa3",
+    "code": "BB",
+    "type": "Bid Bulletin",
+    "date_created": "2019-11-15 01:23:05"
+  },
+  {
+    "type_id": "54546b13-6d7d-4377-9bb1-42cd6241baa4",
+    "code": "BRF",
+    "type": "Briefer",
+    "date_created": "2019-11-15 01:23:05"
+  },
+  {
+    "type_id": "54546b13-6d7d-4377-9bb1-42cd6241baa5",
+    "code": "CAF",
+    "type": "Certificate of Availability of Funds",
+    "date_created": "2019-11-15 01:23:05"
+  },
+  {
+    "type_id": "54546b13-6d7d-4377-9bb1-42cd6241baa6",
+    "code": "CC",
+    "type": "Certificate Compliance",
+    "date_created": "2019-11-15 01:23:05"
+  },
+  {
+    "type_id": "54546b13-6d7d-4377-9bb1-42cd6241baa7",
+    "code": "ER",
+    "type": "Evaluation Report",
+    "date_created": "2019-11-15 01:23:05"
+  },
+  {
+    "type_id": "54546b13-6d7d-4377-9bb1-42cd6241baa8",
+    "code": "IL",
+    "type": "Indorsement Letter",
+    "date_created": "2019-11-15 01:23:05"
+  },
+  {
+    "type_id": "54546b13-6d7d-4377-9bb1-42cd6241baa9",
+    "code": "IB",
+    "type": "Invitation to Bid",
+    "date_created": "2019-11-15 01:23:05"
+  },
+  {
+    "type_id": "54546b13-6d7d-4377-9bb1-42cd6241bab4",
+    "code": "BER",
+    "type": "Bid Evaluation Review",
+    "date_created": "2019-11-15 01:23:05"
+  },
+  {
+    "type_id": "54546b13-6d7d-4377-9bb1-42cd6241bb13",
+    "code": "ACP",
+    "type": "Activity Proceedings",
+    "date_created": "2019-11-15 01:23:05"
+  },
+  {
+    "type_id": "59da47c8-0463-41ab-8226-08d4d6e0480a",
+    "code": "PAR",
+    "type": "Property Accountability Receipt",
+    "date_created": "2022-02-15 04:18:04"
+  },
+  {
+    "type_id": "5a5f8a19-0320-47b2-b451-2134f9095379",
+    "code": "LE",
+    "type": "Letter",
+    "date_created": "2019-11-15 01:25:54"
+  },
+  {
+    "type_id": "5cced2f2-1947-42d4-a672-875cfec0d5fe",
+    "code": "AOM",
+    "type": "Audit Observation Memorandum",
+    "date_created": "2022-05-24 02:55:57"
+  },
+  {
+    "type_id": "5eca4227-6f4c-4ad5-88de-8045e8c9b059",
+    "code": "PY",
+    "type": "Payroll",
+    "date_created": "2022-02-06 23:27:37"
+  },
+  {
+    "type_id": "63823e95-3ac7-4217-8134-974b7d674b76",
+    "code": "JMO",
+    "type": "Joint Memorandum Order",
+    "date_created": "2022-02-15 04:10:31"
+  },
+  {
+    "type_id": "64dc5eb5-4d79-48e1-8427-1v5811f78c41",
+    "code": "BPF",
+    "type": "Budget Proposal Form",
+    "date_created": "2020-02-19 06:30:17"
+  },
+  {
+    "type_id": "695818fc-e257-41db-bcbd-6b236c886b54",
+    "code": "AO",
+    "type": "Administrative Order",
+    "date_created": "2019-11-15 01:22:22"
+  },
+  {
+    "type_id": "7476c6cb-706c-4447-af81-e0f6b380fb74",
+    "code": "AL",
+    "type": "Application for Leave",
+    "date_created": "2020-02-19 06:25:36"
+  },
+  {
+    "type_id": "785cf0ac-e0bc-47b8-9f57-5054713b6e19",
+    "code": "LD",
+    "type": "LDDAP / ADA",
+    "date_created": "2022-02-15 04:16:32"
+  },
+  {
+    "type_id": "78ec4377-3e08-49a2-8dd7-7fcda4c960cd",
+    "code": "IT",
+    "type": "Itinerary of Travel",
+    "date_created": "2020-02-19 06:22:36"
+  },
+  {
+    "type_id": "7d0cc6a4-f18e-4484-952b-4763bba0b791",
+    "code": "MO",
+    "type": "Memorandum Order",
+    "date_created": "2019-11-15 01:18:42"
+  },
+  {
+    "type_id": "8147dad4-e0bb-4a43-95a8-c9863de1b42f",
+    "code": "PRS",
+    "type": "Procurement Request Action Slip",
+    "date_created": "2022-02-15 04:19:19"
+  },
+  {
+    "type_id": "89397504-5a48-46a8-b288-3a233a1b38aa",
+    "code": "ICS",
+    "type": "Inventory Custodian Slip",
+    "date_created": "2022-02-15 04:07:27"
+  },
+  {
+    "type_id": "898109e5-205d-465a-8ad8-82b807c9cdff",
+    "code": "IPC",
+    "type": "Individual Performance Commitment and Review",
+    "date_created": "2022-02-15 04:22:53"
+  },
+  {
+    "type_id": "8d14d699-19c0-4558-978a-b0303cbcb4c1",
+    "code": "NOA",
+    "type": "Notice of Award",
+    "date_created": "2022-03-01 01:59:56"
+  },
+  {
+    "type_id": "8d24d699-59c0-4558-978a-b0303cbcb4cd",
+    "code": "OO",
+    "type": "Office Order",
+    "date_created": "2022-03-01 01:59:56"
+  },
+  {
+    "type_id": "8f025e7d-6b5d-44c6-a15c-69eae222a28b",
+    "code": "NM",
+    "type": "Notice of Meeting",
+    "date_created": "2019-11-15 01:26:24"
+  },
+  {
+    "type_id": "8ff3fe6c-03ae-4079-95f0-48e9bd36cb75",
+    "code": "EO",
+    "type": "Executive Order",
+    "date_created": "2019-11-15 01:24:56"
+  },
+  {
+    "type_id": "9304df8f-a323-453d-a458-ab728e1bc419",
+    "code": "MC",
+    "type": "Memorandum Circular",
+    "date_created": "2019-11-15 01:16:00"
+  },
+  {
+    "type_id": "9346654d-8380-452e-8eb6-47aa3bd9754f",
+    "code": "SPCR",
+    "type": "Service Performance Commitment and Review ",
+    "date_created": "2022-02-15 04:23:21"
+  },
+  {
+    "type_id": "94546b13-6d7d-4377-kbb1-42cd6241bb96",
+    "code": "SHL",
+    "type": "Shortlist",
+    "date_created": "2019-11-15 01:23:05"
+  },
+  {
+    "type_id": "9bd92ebb-831b-4a17-b101-7166d6b233c5",
+    "code": "RIS",
+    "type": "Requisition and Issue Slip",
+    "date_created": "2022-02-15 04:20:15"
+  },
+  {
+    "type_id": "9g546b13-6d7d-4377-aaaa-42cd6241bb91",
+    "code": "ADV",
+    "type": "Advisory",
+    "date_created": "2019-11-15 01:23:05"
+  },
+  {
+    "type_id": "a65baf8d-e267-4dea-91ac-1224ce112655",
+    "code": "TA",
+    "type": "Travel Authority",
+    "date_created": "2020-02-19 06:21:40"
+  },
+  {
+    "type_id": "a6a2fac3-84d0-4c81-9bc8-26468ee97b4f",
+    "code": "NSA",
+    "type": "Notice of Salary Adjustment",
+    "date_created": "2022-02-15 04:17:29"
+  },
+  {
+    "type_id": "a78ae0d8-9b56-4ad5-9359-4e35c373fee4",
+    "code": "DV",
+    "type": "Disbursement Voucher",
+    "date_created": "2020-02-19 06:24:21"
+  },
+  {
+    "type_id": "acic6b13-6d7d-4377-9bb1-42cd6241ba21",
+    "code": "ACIC",
+    "type": "Advice of Check Issued and Cancelled",
+    "date_created": "2019-11-15 01:23:05"
+  },
+  {
+    "type_id": "b39a6ef7-1d6a-417c-9910-e73527abae33",
+    "code": "CON",
+    "type": "Contract",
+    "date_created": "2020-02-19 06:31:04"
+  },
+  {
+    "type_id": "b8d94002-638d-444d-bf5e-404730524245",
+    "code": "CF",
+    "type": "Confidential / Sealed",
+    "date_created": "2022-02-10 20:02:06"
+  },
+  {
+    "type_id": "bbda47c8-0463-41ab-8226-08d4d6e0480a",
+    "code": "ND",
+    "type": "Notice of Delivery",
+    "date_created": "2022-02-15 04:18:04"
+  },
+  {
+    "type_id": "cfe5bd15-f689-4309-b697-7e96d83098d9",
+    "code": "IN",
+    "type": "Invitation",
+    "date_created": "2020-01-03 02:34:36"
+  },
+  {
+    "type_id": "crr46b13-6d7d-4377-9bb1-42cd6241ba21",
+    "code": "CRR",
+    "type": "Cash Receipts Record",
+    "date_created": "2019-11-15 01:23:05"
+  },
+  {
+    "type_id": "ctec4377-3e08-49a2-8dd7-bfcda4c960cd",
+    "code": "CTC",
+    "type": "Certificate of Travel Completed",
+    "date_created": "2020-02-19 06:22:36"
+  },
+  {
+    "type_id": "d6d16ba6-44b1-475e-a0f4-85b8adc6a0d9",
+    "code": "PO",
+    "type": "Purchase Order",
+    "date_created": "2022-02-15 04:19:44"
+  },
+  {
+    "type_id": "d8a62c78-8a61-4052-8dca-bf195f56a689",
+    "code": "UC",
+    "type": "Unclassified",
+    "date_created": "2019-11-20 03:33:30"
+  },
+  {
+    "type_id": "ddda47c8-0463-41ab-8226-08d4d6e0480a",
+    "code": "PTR",
+    "type": "Property Transfer Report",
+    "date_created": "2022-02-15 04:18:04"
+  },
+  {
+    "type_id": "dfde4bce-c2c0-4a5c-bf54-607a27badca2",
+    "code": "SO",
+    "type": "Special Order",
+    "date_created": "2019-11-15 01:18:04"
+  },
+  {
+    "type_id": "e20fc9a4-2f91-4302-aaef-3392b8dfed82",
+    "code": "DC",
+    "type": "Department Circular",
+    "date_created": "2019-11-15 01:24:23"
+  },
+  {
+    "type_id": "e4546b13-6d7d-4377-9bb1-42cd6241bb99",
+    "code": "AC",
+    "type": "Administrative Circular",
+    "date_created": "2019-11-15 01:23:05"
+  },
+  {
+    "type_id": "edda47c8-0463-41ab-822e-08d4d6e0480e",
+    "code": "GP",
+    "type": "Gate Pass",
+    "date_created": "2022-02-15 04:18:04"
+  },
+  {
+    "type_id": "f3d94066-a598-419e-85ae-32c31c534d1d",
+    "code": "CLR",
+    "type": "Clearance",
+    "date_created": "2022-05-18 06:40:35"
+  },
+  {
+    "type_id": "f4546b13-6d7d-4377-fbb1-42cd6241baa3",
+    "code": "WO",
+    "type": "Work Order",
+    "date_created": "2019-11-15 01:23:05"
+  },
+  {
+    "type_id": "fe914b9e-d929-4334-b214-bed171b65c56",
+    "code": "JMC",
+    "type": "Joint Memorandum Circular",
+    "date_created": "2022-02-15 04:10:03"
+  },
+  {
+    "type_id": "ff5f54fe-60fe-4eea-b8a2-82debabdadbf",
+    "code": "GMO",
+    "type": "General Memorandum Order",
+    "date_created": "2022-02-15 04:02:59"
+  },
+  {
+    "type_id": "fr546b13-6d7d-4377-9bb1-42cd6241baa1",
+    "code": "FR",
+    "type": "Financial Report",
+    "date_created": "2019-11-15 01:23:05"
+  },
+  {
+    "type_id": "g4546b13-6d7d-g377-9bb1-42cd6241baa5",
+    "code": "PEP",
+    "type": "Performance Evaluation Profile",
+    "date_created": "2019-11-15 01:23:05"
+  },
+  {
+    "type_id": "g4546b13-6d7d-g377-9bb1-42cd6241baa6",
+    "code": "LAP",
+    "type": "Learning Application Plan Form",
+    "date_created": "2019-11-15 01:23:05"
+  },
+  {
+    "type_id": "h4546b13-6d7d-4377-9bb1-42cd6241bab2",
+    "code": "MCV",
+    "type": "Matrix of Curricula Vitae",
+    "date_created": "2019-11-15 01:23:05"
+  },
+  {
+    "type_id": "hcced2fh-1947-42d4-a672-875cfec0d5fh",
+    "code": "RSM",
+    "type": "Reports of Supplies and Materials Issued",
+    "date_created": "2022-05-24 02:55:57"
+  },
+  {
+    "type_id": "idp46b13-6d7d-4377-9bb1-42cd6241baa1",
+    "code": "IDP",
+    "type": "Individual Development Plan",
+    "date_created": "2019-11-15 01:23:05"
+  },
+  {
+    "type_id": "iirup504-5a48-46a8-b288-3a233a1b38aa",
+    "code": "IIRUP",
+    "type": "IIRUP",
+    "date_created": "2022-02-15 04:07:27"
+  },
+  {
+    "type_id": "or546b13-6d7d-4377-fbb1-42cd6241baa3",
+    "code": "OR",
+    "type": "Official Receipt",
+    "date_created": "2019-11-15 01:23:05"
+  },
+  {
+    "type_id": "or546b13-6d7d-4377-fbb1-42cd6241bab4",
+    "code": "OB",
+    "type": "Official Business",
+    "date_created": "2019-11-15 01:23:05"
+  },
+  {
+    "type_id": "pcv6c6cb-706c-4447-af81-e0f6b380fb74",
+    "code": "PCV",
+    "type": "Petty Cash Voucher",
+    "date_created": "2020-02-19 06:25:36"
+  },
+  {
+    "type_id": "r947dad4-e0bb-4a43-95a8-c9863de1b42r",
+    "code": "PPMPR",
+    "type": "PROJECT PROCUREMENT MANAGEMENT PLAN REVISION",
+    "date_created": "2022-02-15 04:19:19"
+  },
+  {
+    "type_id": "raaf6b13-6d7d-4377-9bb1-42cd6241ba21",
+    "code": "RAAF",
+    "type": "Report of Accountability for Accountable Forms",
+    "date_created": "2019-11-15 01:23:05"
+  },
+  {
+    "type_id": "radaib13-6d7d-4377-fbb1-42cd6241baa3",
+    "code": "RADAI",
+    "type": "Repor of Advise to Debit Account Issued",
+    "date_created": "2019-11-15 01:23:05"
+  },
+  {
+    "type_id": "rcd46b13-6d7d-4377-9bb1-42cd6241ba21",
+    "code": "RCD",
+    "type": "Report of Collections and Deposits",
+    "date_created": "2019-11-15 01:23:05"
+  },
+  {
+    "type_id": "rpci7504-5a48-46a8-b288-3a233a1b38aa",
+    "code": "RPCI",
+    "type": "Report on the Physical Count of Inventories",
+    "date_created": "2022-02-15 04:07:27"
+  },
+  {
+    "type_id": "rsc46b13-6d7d-4377-fbb1-42cd6241baa3",
+    "code": "RSC",
+    "type": "Report of Staled Cheques",
+    "date_created": "2019-11-15 01:23:05"
+  },
+  {
+    "type_id": "wmr46b13-6d7d-4377-aaaa-42cd6241bb91",
+    "code": "WMR",
+    "type": "Waste Material Report",
+    "date_created": "2019-11-15 01:23:05"
+  },
+  {
+    "type_id": "ye1f301d-f4d3-456e-ab8c-26120b87fd4y",
+    "code": "ATR",
+    "type": "After Travel Report",
+    "date_created": "2022-02-15 04:08:18"
+  }
+]

@@ -1,0 +1,62 @@
+[
+  {
+    "for_id": 1,
+    "for": "Appropriate Action",
+    "status": "1"
+  },
+  {
+    "for_id": 2,
+    "for": "Urgent Action",
+    "status": "1"
+  },
+  {
+    "for_id": 3,
+    "for": "Dissemination of Information",
+    "status": "1"
+  },
+  {
+    "for_id": 4,
+    "for": "Comment/Reaction/Response",
+    "status": "1"
+  },
+  {
+    "for_id": 5,
+    "for": "Compliance/Implementation",
+    "status": "1"
+  },
+  {
+    "for_id": 6,
+    "for": "Endorsement/Recommendation",
+    "status": "1"
+  },
+  {
+    "for_id": 7,
+    "for": "Coding/Deposit/Preparation of Receipt",
+    "status": "1"
+  },
+  {
+    "for_id": 8,
+    "for": "Follow Up",
+    "status": "1"
+  },
+  {
+    "for_id": 9,
+    "for": "Investigation/Verification and Report",
+    "status": "1"
+  },
+  {
+    "for_id": 10,
+    "for": "Your Information",
+    "status": "1"
+  },
+  {
+    "for_id": 11,
+    "for": "Draft of Reply",
+    "status": "1"
+  },
+  {
+    "for_id": 12,
+    "for": "Approval",
+    "status": "1"
+  }
+]

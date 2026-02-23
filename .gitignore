@@ -25,9 +25,55 @@
 /server-laravel/storage/framework/sessions/*
 /server-laravel/storage/framework/views/*
 /server-laravel/bootstrap/cache/*
+/server-laravel/storage/secrets/
+/server-laravel/storage/*.key
 
 ################################
 # Editors
 ################################
 .vscode
 .idea
+
+
+################################
+# Node (All node_modules)
+################################
+node_modules/
+**/node_modules/
+
+################################
+# Vite cache
+################################
+.vite/
+
+################################
+# Env files
+################################
+.env
+.env.*
+**/.env
+**/.env.*
+
+
+
+# Node
+node_modules/
+**/node_modules/
+.vite/
+dist/
+coverage/
+
+# Env files
+.env
+.env.*
+**/.env
+**/.env.*
+
+# Laravel
+/server-laravel/vendor/
+/server-laravel/storage/*.key
+/server-laravel/storage/secrets/
+/server-laravel/bootstrap/cache/*.php
+
+# OS
+.DS_Store

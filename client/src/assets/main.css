@@ -1,0 +1,21 @@
+@import "tailwindcss";
+/* @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap'); */
+
+@theme {
+  --font-headings: "Poppins", sans-serif;
+  --font-display: "Poppins", sans-serif;
+  --font-labels: "IBM Plex Sans", sans-serif;
+}
+
+@layer base {
+   h1, h2 {
+    font-family: var(--font-headings);
+  }
+  h3, h4, h5 {
+    font-family: var(--font-display);
+  }
+
+  h6 {
+    font-family: var(--font-labels);
+  }
+}
