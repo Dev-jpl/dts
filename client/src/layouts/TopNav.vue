@@ -25,7 +25,7 @@ const toggleTrackModal = () => {
 
 <template>
   <header class="w-full px-4 py-1.5 h-[50px] bg-gray-100 border-gray-200 shrink-0">
-    <div class="container flex items-center justify-between mx-auto">
+    <div class="flex items-center justify-between mx-auto">
       <div class="flex items-center space-x-2">
         <!-- <button class="mr-t4">
         <svg

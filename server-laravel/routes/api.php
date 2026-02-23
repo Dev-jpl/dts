@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DocumentController;
+use App\Http\Controllers\IncomingController;
 use App\Http\Controllers\OfficeLibraryController;
 use App\Http\Controllers\SignatoriesLibraryController;
 use App\Http\Controllers\TransactionController;
@@ -39,9 +40,17 @@ Route::middleware(['auth:api'])->group(function () {
         Route::get('/offices', [OfficeLibraryController::class, 'index']);
         Route::get('/signatories', [SignatoriesLibraryController::class, 'index']);
     });
-
-
     //
+
+    // Incoming Module
+    Route::prefix('incoming')->group(function () {
+        Route::get('/',            [IncomingController::class, 'index']);      // All Incoming
+        Route::get('/for-action',  [IncomingController::class, 'forAction']); // For Action tab
+        Route::get('/actioned',    [IncomingController::class, 'actioned']);   // Actioned tab
+        Route::get('/overdue',     [IncomingController::class, 'overdue']);    // Overdue tab
+        Route::get('/counts',      [IncomingController::class, 'counts']);     // Tab badge counts
+        Route::get('/filters',    [IncomingController::class, 'filters']);    // Filter dropdown options
+    });
 });
 
 Route::get('/machine-data', function () {
