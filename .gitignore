@@ -1,0 +1,33 @@
+################################
+# ROOT
+################################
+.DS_Store
+*.log
+
+################################
+# CLIENT (Node)
+################################
+/client/node_modules
+/client/dist
+/client/coverage
+/client/.env
+/client/.env.*
+
+################################
+# SERVER (Laravel)
+################################
+/server-laravel/vendor
+/server-laravel/node_modules
+/server-laravel/.env
+/server-laravel/.env.*
+/server-laravel/storage/logs/*
+/server-laravel/storage/framework/cache/*
+/server-laravel/storage/framework/sessions/*
+/server-laravel/storage/framework/views/*
+/server-laravel/bootstrap/cache/*
+
+################################
+# Editors
+################################
+.vscode
+.idea
