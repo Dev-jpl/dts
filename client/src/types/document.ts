@@ -18,8 +18,10 @@ export interface Signatory {
 export interface UploadedFile {
     name: string;
     size: string;
+    size_bytes: number;
     type: string;
     url: string;
+    temp_path: string;
     uploaded_at?: string | null;
     document_id?: string | null;
     id?: number;

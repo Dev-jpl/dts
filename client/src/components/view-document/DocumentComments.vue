@@ -1,76 +1,73 @@
 <script setup lang="ts">
-import { FiMessageCircle } from "vue-icons-plus/fi";
-import Textarea from "../ui/textareas/Textarea.vue";
-import dayjs from "dayjs";
-import relativeTime from "dayjs/plugin/relativeTime";
+import { ref } from "vue"
+import { FiMessageCircle } from "vue-icons-plus/fi"
+import Textarea from "../ui/textareas/Textarea.vue"
+import BaseButton from "../ui/buttons/BaseButton.vue"
+import dayjs from "dayjs"
+import relativeTime from "dayjs/plugin/relativeTime"
 
-dayjs.extend(relativeTime);
+dayjs.extend(relativeTime)
 
-defineProps({ comments: { type: Array } });
+const props = defineProps<{
+  comments: any[]
+  trxNo: string
+  onPost: (trxNo: string, comment: string) => Promise<any>
+}>()
+
+const newComment = ref('')
+const submitting = ref(false)
+
+async function submitComment() {
+  if (!newComment.value.trim()) return
+  submitting.value = true
+  try {
+    await props.onPost(props.trxNo, newComment.value.trim())
+    newComment.value = ''
+  } finally {
+    submitting.value = false
+  }
+}
 </script>
 
 <template>
-  <div class="relative h-full">
-    <div class="h-[calc(100svh-350px)] overflow-y-auto w-full">
-      <template
-        v-for="(commentItem, index) in comments"
-        :key="index"
-      >
-        <!-- Date Heading -->
-        <!-- <div class="mb-3 ps-2 first:mt-0">
-          <h3 class="text-xs font-semibold text-gray-600 dark:text-gray-400">
-            {{ commentItem.date }}
-          </h3>
-        </div> -->
+  <div class="relative h-[calc(100svh-10rem)] overflow-hidden w-full">
+    <div class="h-[calc(100svh-10rem)] overflow-y-auto w-full">
 
-        <!-- Comment Entry -->
+      <div v-if="comments.length === 0" class="py-10 text-xs text-center text-gray-400">
+        No comments yet. Be the first to comment.
+      </div>
+
+      <template v-for="(item, index) in comments" :key="item.id ?? index">
         <div class="flex pb-6 gap-x-3">
-          <!-- Timeline Line -->
           <div
-            class="relative last:after:hidden after:absolute after:top-7 after:bottom-0 after:start-3.5 after:w-px after:-translate-x-[0.5px] after:bg-gray-300 dark:after:bg-neutral-700"
-          >
+            class="relative last:after:hidden after:absolute after:top-7 after:bottom-0 after:start-3.5 after:w-px after:-translate-x-[0.5px] after:bg-gray-300">
             <div class="relative z-10 flex items-center justify-center size-7">
-              <!-- <div
-                class="bg-gray-500 rounded-full size-2 dark:bg-gray-400"
-              ></div> -->
               <FiMessageCircle class="w-4 h-4 mr-1" />
             </div>
           </div>
-
-          <!-- Comment Body -->
           <div class="grow">
-            <h3
-              class="flex items-center text-xs font-medium text-gray-800 dark:text-white gap-x-2"
-            >
-              {{ commentItem.user }}
+            <h3 class="text-xs font-medium text-gray-800">
+              {{ item.assigned_personnel_name }}
             </h3>
-            <span
-              class="px-2 text-xs py-0.5 font-medium text-gray-500 bg-gray-100 rounded dark:bg-neutral-700 dark:text-neutral-300"
-            >
-              {{ commentItem.service }}
+            <span class="px-2 text-xs py-0.5 font-medium text-gray-500 bg-gray-100 rounded">
+              {{ item.office_name }}
             </span>
-            <p class="mt-1 text-sm text-gray-600 dark:text-neutral-400">
-              {{ commentItem.comment }}
+            <p class="mt-1 text-sm text-gray-600">{{ item.comment }}</p>
+            <p class="text-[10px] text-gray-400 mt-1">
+              {{ dayjs(item.created_at).fromNow() }}
             </p>
-
-            <!-- Metadata Row -->
-            <div class="flex flex-wrap items-center gap-2 mt-2 text-xs">
-              <!-- <span class="italic text-gray-500 dark:text-neutral-300">
-              — {{ commentItem.user }}
-            </span> -->
-            </div>
-
-            <h3
-              class="text-[10px] font-semibold text-gray-600 dark:text-gray-400"
-            >
-              {{ dayjs(commentItem.date).fromNow() }}
-            </h3>
           </div>
         </div>
       </template>
+
     </div>
+
     <div class="absolute left-0 w-full p-4 bottom-10">
-      <Textarea :label="'Comment'" />
+      <Textarea v-model="newComment" :label="'Comment'" />
+      <div class="flex justify-end mt-2">
+        <BaseButton :btn-text="submitting ? 'Posting...' : 'Post Comment'" :action="submitComment"
+          :disabled="submitting || !newComment.trim()" />
+      </div>
     </div>
   </div>
 </template>

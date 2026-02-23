@@ -81,28 +81,18 @@ export function useDocumentInformation() {
     }
 
     function extractResponses(rawResponses: any[]): UploadedFile[] {
-
-        console.log(rawResponses);
-
-        return rawResponses.map((res) => {
-            const file = res[0]?.attributes ?? res[0]; // Handle nested data
-
-            console.log('file', file);
-            console.log('file.original_name', file.original_name);
-
-            return {
-                name: file.original_name || "untitled",
-                size: formatSize((file.size ?? 0) * 1024),
-                type: file.mime || file.ext || "application/octet-stream",
-                url: file.url ? `http://localhost:1337${file.url}` : "",
-                uploaded_at: file.createdAt || file.updatedAt || null,
-                document_id: file.documentId || null,
-                id: file.id ?? undefined,
-                width: file.width ?? undefined,
-                height: file.height ?? undefined,
-            };
-        });
+        return rawResponses
+            .filter(Boolean)
+            .map((file) => ({
+                name: file.original_name ?? 'untitled',
+                size: formatSize(file.size ?? 0),
+                size_bytes: file.size ?? 0,
+                type: file.mime_type ?? 'application/octet-stream',
+                url: file.url ?? '',
+                temp_path: file.temp_path ?? '',
+            }));
     }
+
 
     function setFiles(responses: any[]) {
         documentInformation.files = extractResponses(responses);
@@ -119,12 +109,17 @@ export function useDocumentInformation() {
         )
     }
 
+    // async function submitDocument() {
+    //     // Here you would typically send `documentInformation` to your backend API
+
+    //     const response = await API.post('/transactions/create', documentInformation);
+
+    //     console.log("Submitting Document Information:", response.data);
+    //     return response;
+    // }
+
     async function submitDocument() {
-        // Here you would typically send `documentInformation` to your backend API
-
         const response = await API.post('/transactions/create', documentInformation);
-
-        console.log("Submitting Document Information:", response.data);
         return response;
     }
 

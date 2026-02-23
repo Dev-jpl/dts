@@ -102,10 +102,11 @@ export function useUploader() {
             const formData = new FormData();
             console.log('task', task);
 
-            formData.append("files", task.file);
+            // formData.append("files", task.file);
+            formData.append("files[]", task.file);  // ← was "files", needs to be "files[]"
 
             const xhr = new XMLHttpRequest();
-            xhr.open("POST", "http://localhost:8000/api/upload", true);
+            xhr.open("POST", "http://localhost:8000/api/upload/temp", true);
             xhr.setRequestHeader("Authorization", `Bearer ${token}`);
 
             xhr.upload.onprogress = (event) => {
@@ -116,15 +117,29 @@ export function useUploader() {
 
             xhr.onload = () => {
                 task.finished = true;
-                try {
-                    const rawResponse = JSON.parse(xhr.responseText); // Expecting an array of file objects
-                    const enrichedResponse = rawResponse.map((fileRes: any) => ({
-                        ...fileRes,
-                        original_name: task.name,
-                    }));
-                    resolve(enrichedResponse); // Tag each file with original filename
-                } catch {
-                    reject(new Error("Invalid JSON response"));
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    try {
+                        const rawResponse = JSON.parse(xhr.responseText);
+
+                        console.log('XHR RAW RESPONSE:', rawResponse);        // what Laravel actually sent
+                        console.log('XHR fileData:', rawResponse[0]);         // what we're resolving with
+
+                        // Laravel wraps response in { message, data: [...] }
+                        const fileData = Array.isArray(rawResponse)
+                            ? rawResponse[0]           // flat array (if you change Laravel later)
+                            : rawResponse.data?.[0];   // wrapped { data: [...] }
+
+                        resolve({
+                            ...fileData,
+                            original_name: task.name,
+                        });
+                    } catch {
+                        task.error = true;
+                        reject(new Error('Invalid JSON response'));
+                    }
+                } else {
+                    task.error = true;
+                    reject(new Error(`Upload failed: ${xhr.status}`));
                 }
             };
 

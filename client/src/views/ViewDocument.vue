@@ -91,43 +91,49 @@ import ForwardDocModal from "@/components/view-document/ForwardDocModal.vue";
 import { useTransaction } from "@/composables/useTransaction";
 
 const route = useRoute();
-const { fetchTransaction, transaction, trxLogs, loading, logsError, logsLoading } = useTransaction();
+// const { fetchTransaction, transaction, trxLogs, loading, logsError, logsLoading } = useTransaction();
+
+const {
+  fetchTransaction, transaction, trxLogs, loading, logsError, logsLoading,
+  comments, commentsLoading, postComment    // ← add
+} = useTransaction()
+
 onMounted(async () => {
   const transaction_no = route.params.trxNo as string;
   await fetchTransaction(transaction_no);
   documentInformation.documentNumber = transaction.value?.document_no || "N/A";
 });
 
-const comments = ref([
-  {
-    user: "John Doe",
-    comment: "Reviewed the market linkage section...",
-    service: "Agribusiness and Marketing Assistance Service (AMAS)",
-    office: "Agribusiness and Investment Promotion Division (AIPD)",
-    date: new Date(Date.now() - 60 * 60 * 1000).toISOString(), // 1hr ago
-  },
-  {
-    user: "Maria Santos",
-    comment: "Please clarify the funding breakdown...",
-    service: "Agribusiness and Marketing Assistance Service (AMAS)",
-    office: "Investment Research Unit",
-    date: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2hr ago
-  },
-  {
-    user: "Leo Mercado",
-    comment: "I’ve formatted the document...",
-    service: "Agribusiness and Marketing Assistance Service (AMAS)",
-    office: "Project Coordination Office",
-    date: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(), // 3hr ago
-  },
-  {
-    user: "Karen Uy",
-    comment: "Section on crop insurance looks solid...",
-    service: "Agribusiness and Marketing Assistance Service (AMAS)",
-    office: "Policy Analysis Team",
-    date: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(), // 4hr ago
-  },
-]);
+// const comments = ref([
+//   {
+//     user: "John Doe",
+//     comment: "Reviewed the market linkage section...",
+//     service: "Agribusiness and Marketing Assistance Service (AMAS)",
+//     office: "Agribusiness and Investment Promotion Division (AIPD)",
+//     date: new Date(Date.now() - 60 * 60 * 1000).toISOString(), // 1hr ago
+//   },
+//   {
+//     user: "Maria Santos",
+//     comment: "Please clarify the funding breakdown...",
+//     service: "Agribusiness and Marketing Assistance Service (AMAS)",
+//     office: "Investment Research Unit",
+//     date: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2hr ago
+//   },
+//   {
+//     user: "Leo Mercado",
+//     comment: "I’ve formatted the document...",
+//     service: "Agribusiness and Marketing Assistance Service (AMAS)",
+//     office: "Project Coordination Office",
+//     date: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(), // 3hr ago
+//   },
+//   {
+//     user: "Karen Uy",
+//     comment: "Section on crop insurance looks solid...",
+//     service: "Agribusiness and Marketing Assistance Service (AMAS)",
+//     office: "Policy Analysis Team",
+//     date: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(), // 4hr ago
+//   },
+// ]);
 
 const activeTab = ref<"History Logs" | "Comments">("History Logs");
 
@@ -360,7 +366,8 @@ const toggleReturnModal = () => {
                 <HistoryLogs :historyLogs="trxLogs" :isLoading="logsLoading" :hasError="logsError" class="px-4 mt-8" />
               </div>
               <div v-show="activeTab == 'Comments'" class="h-full">
-                <DocumentComments :comments="comments" class="px-4 mt-8" />
+                <DocumentComments :comments="comments" :trxNo="transaction?.transaction_no ?? ''" :onPost="postComment"
+                  class="px-4 mt-8" />
               </div>
             </div>
           </div>

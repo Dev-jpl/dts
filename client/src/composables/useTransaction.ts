@@ -57,27 +57,65 @@ export function useTransaction(initial?: Transaction) {
         }
     }
 
+
+    const comments = ref<any[]>([])
+    const commentsLoading = ref(false)
+    const commentsError = ref<string | null>(null)
+
+    async function fetchComments(trxNo: string) {
+        commentsLoading.value = true
+        commentsError.value = null
+        try {
+            const { data } = await API.get(`/transactions/${trxNo}/comments`)
+            comments.value = data.data
+        } catch (e: any) {
+            commentsError.value = e.message
+            console.error('Failed to fetch comments', e)
+        } finally {
+            commentsLoading.value = false
+        }
+    }
+
+    async function postComment(trxNo: string, comment: string) {
+        const { data } = await API.post(`/transactions/${trxNo}/comments`, { comment })
+        comments.value.push(data.data) // optimistically append
+        return data
+    }
+
     // Auto-fetch logs when transaction changes
     watch(
         () => transaction.value?.transaction_no,
         (trxNo) => {
             if (trxNo) {
                 fetchTransactionLogs(trxNo)
+                fetchComments(trxNo)
             }
         },
         { immediate: true }
     )
 
     return {
+        //Transaction
         transaction,
         setTransaction,
         fetchTransaction,
         loading,
         error,
+
+        //Logs
         trxLogs,
         logsLoading,
         logsError,
         fetchTransactionLogs,
+
+        //Actions
         releaseDocument,
+
+        //comments
+        comments,
+        commentsLoading,
+        commentsError,
+        fetchComments,
+        postComment,
     }
 }

@@ -37,6 +37,25 @@ const formattedDate = computed(() =>
     : '—'
 )
 
+import { BsFileEarmarkPdf } from "vue-icons-plus/bs"
+
+// Split attachments by type
+const mainFiles = computed(() => attachments.value.filter((a: any) => a.attachment_type === 'main'))
+const attachmentFiles = computed(() => attachments.value.filter((a: any) => a.attachment_type === 'attachment'))
+
+// Build full URL from relative storage path
+function fileUrl(path: string): string {
+  return `http://localhost:8000/storage/${path}`
+}
+
+// Format bytes to human-readable
+function formatFileSize(bytes: number): string {
+  if (!bytes) return '0 B'
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
 const toggleRoutingDetails = useToggle(true);
 </script>
 
@@ -91,165 +110,208 @@ const toggleRoutingDetails = useToggle(true);
           </div>
         </div>
 
-        <div class="h-[calc(100svh-100px)] overflow-y-auto">
+        <div class="h-[calc(100svh-17rem)] overflow-y-auto">
           <!-- //Title -->
-          <div :class="!toggleRoutingDetails.isToggled.value ? 'border ' : ''" class="p-2 border-gray-200 rounded-md">
-            <div class="flex items-center justify-between">
+          <div class="pb-20">
+            <div :class="!toggleRoutingDetails.isToggled.value ? 'border ' : ''" class="p-2 border-gray-200 rounded-md">
+              <div class="flex items-center justify-between">
+                <h1 class="flex items-center text-lg font-semibold text-gray-800 ">
+                  <RoutingInfoIcon class="mr-2 text-gray-500 size-5 hover:text-gray-700" />
+                  Routing Details
+                </h1>
+                <button @click="toggleRoutingDetails.toggle()" type="button" class="flex items-center p-2 text-xs">
+                  <span v-if="toggleRoutingDetails.isToggled.value"
+                    class="text-gray-500 hover:underline hover:text-gray-700">
+                    Hide details
+                  </span>
+                  <span v-else class="text-gray-500 hover:text-gray-700 hover:underline">
+                    Show details
+                  </span>
+                  <CaretDownIcon :class="toggleRoutingDetails.isToggled.value ? 'rotate-180' : ''"
+                    class="ml-1 text-gray-500 size-5 hover:text-gray-700" />
+                </button>
+              </div>
+
+              <div v-if="toggleRoutingDetails.isToggled.value" class="space-y-2">
+                <!-- ================= FROM ================= -->
+                <div class="grid grid-cols-12 rounded-md bg-gray-50">
+                  <div class="col-span-2 p-3">
+                    <FrmLabel label="From:" />
+                  </div>
+                  <div class="col-span-10 p-3 pl-10 text-xs">
+                    {{ document.office_name }}
+                  </div>
+                </div>
+
+                <!-- ================= TO ================= -->
+                <div class="grid grid-cols-12 rounded-md bg-gray-50">
+                  <div class="col-span-2 p-3">
+                    <FrmLabel label="To:" />
+                  </div>
+
+                  <div class="col-span-10 p-3 pl-10 text-xs">
+                    <ul class="space-y-1 list-disc list-inside">
+                      <li v-for="recipient in recipients" :key="recipient.id" class="disk">
+                        {{ recipient.office_name }}
+                        <span class="text-gray-400 uppercase text-[10px]">
+                          ({{ recipient.recipient_type }})
+                        </span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+
+                <!-- ================= CC ================= -->
+                <div v-if="recipients_cc.length" class="grid grid-cols-12 rounded-md bg-gray-50">
+                  <div class="col-span-2 p-3">
+                    <FrmLabel label="Cc:" />
+                  </div>
+
+                  <div class="col-span-10 p-3 pl-10 text-xs">
+                    <ul class="space-y-1 list-disc list-inside">
+                      <li v-for="recipient in recipients_cc" :key="recipient.id" class="disk">
+                        {{ recipient.office_name }}
+                        <span class="text-gray-400 uppercase text-[10px]">
+                          ({{ recipient.recipient_type }})
+                        </span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+                <!-- ================= BCC ================= -->
+                <div v-if="recipients_bcc.length" class="grid grid-cols-12 rounded-md bg-gray-50">
+                  <div class="col-span-2 p-3">
+                    <FrmLabel label="Bcc:" />
+                  </div>
+
+                  <div class="col-span-10 p-3 pl-10 text-xs">
+                    <ul class="space-y-1 list-disc list-inside">
+                      <li v-for="recipient in recipients_bcc" :key="recipient.id" class="disk">
+                        {{ recipient.office_name }}
+                        <span class="text-gray-400 uppercase text-[10px]">
+                          ({{ recipient.recipient_type }})
+                        </span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between mt-4">
               <h1 class="flex items-center text-lg font-semibold text-gray-800 ">
-                <RoutingInfoIcon class="mr-2 text-gray-500 size-5 hover:text-gray-700" />
-                Routing Details
+                <FileInfoIcon class="mr-2 text-gray-500 size-5 hover:text-gray-700" />
+                Document Information
               </h1>
-              <button @click="toggleRoutingDetails.toggle()" type="button" class="flex items-center p-2 text-xs">
-                <span v-if="toggleRoutingDetails.isToggled.value"
-                  class="text-gray-500 hover:underline hover:text-gray-700">
-                  Hide details
-                </span>
-                <span v-else class="text-gray-500 hover:text-gray-700 hover:underline">
-                  Show details
-                </span>
-                <CaretDownIcon :class="toggleRoutingDetails.isToggled.value ? 'rotate-180' : ''"
-                  class="ml-1 text-gray-500 size-5 hover:text-gray-700" />
+              <button type="button">
+
               </button>
             </div>
 
-            <div v-if="toggleRoutingDetails.isToggled.value" class="space-y-2">
-              <!-- ================= FROM ================= -->
+
+            <div class="p-2 space-y-2">
+              <!-- ================= SUBJECT ================= -->
               <div class="grid grid-cols-12 rounded-md bg-gray-50">
                 <div class="col-span-2 p-3">
-                  <FrmLabel label="From:" />
+                  <FrmLabel label="Subject:" />
                 </div>
                 <div class="col-span-10 p-3 pl-10 text-xs">
-                  {{ document.office_name }}
+                  {{ document.subject }}
                 </div>
               </div>
 
-              <!-- ================= TO ================= -->
+              <!-- ================= REMARKS ================= -->
               <div class="grid grid-cols-12 rounded-md bg-gray-50">
                 <div class="col-span-2 p-3">
-                  <FrmLabel label="To:" />
+                  <FrmLabel label="Remarks:" />
                 </div>
-
                 <div class="col-span-10 p-3 pl-10 text-xs">
-                  <ul class="space-y-1 list-disc list-inside">
-                    <li v-for="recipient in recipients" :key="recipient.id" class="disk">
-                      {{ recipient.office_name }}
-                      <span class="text-gray-400 uppercase text-[10px]">
-                        ({{ recipient.recipient_type }})
-                      </span>
+                  {{ document.remarks ?? '—' }}
+                </div>
+              </div>
+
+              <!-- ================= SIGNATORIES ================= -->
+              <div class="grid grid-cols-12 rounded-md bg-gray-50">
+                <div class="col-span-2 p-3">
+                  <FrmLabel label="Signatories:" />
+                </div>
+                <div class="col-span-10 p-3 pl-10">
+                  <ul class="space-y-2">
+                    <li v-if="signatories.length === 0" class="text-xs text-gray-400">
+                      No signatories
+                    </li>
+                    <li v-for="signatory in signatories" :key="signatory.id">
+                      <div class="text-xs font-medium">
+                        {{ signatory.employee_name }}
+                      </div>
+                      <div class="text-xs text-gray-500">
+                        {{ signatory.office_name }}
+                      </div>
                     </li>
                   </ul>
                 </div>
               </div>
 
-              <!-- ================= CC ================= -->
-              <div class="grid grid-cols-12 rounded-md bg-gray-50">
+              <!-- ================= ATTACHMENTS ================= -->
+              <div
+                class="grid w-full grid-cols-12 border border-gray-100 divide-white rounded-lg overflow-clip divide-x-5 bg-gray-50">
                 <div class="col-span-2 p-3">
-                  <FrmLabel label="Cc:" />
+                  <FrmLabel label="Attachments:" />
                 </div>
+                <div class="col-span-10 p-3 pl-10">
+                  <div class="grid items-stretch grid-flow-row gap-5">
 
-                <div class="col-span-10 p-3 pl-10 text-xs">
-                  <ul class="space-y-1 list-disc list-inside">
-                    <li v-for="recipient in recipients_cc" :key="recipient.id" class="disk">
-                      {{ recipient.office_name }}
-                      <span class="text-gray-400 uppercase text-[10px]">
-                        ({{ recipient.recipient_type }})
-                      </span>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-              <!-- ================= BCC ================= -->
-              <div class="grid grid-cols-12 rounded-md bg-gray-50">
-                <div class="col-span-2 p-3">
-                  <FrmLabel label="Bcc:" />
-                </div>
-
-                <div class="col-span-10 p-3 pl-10 text-xs">
-                  <ul class="space-y-1 list-disc list-inside">
-                    <li v-for="recipient in recipients_bcc" :key="recipient.id" class="disk">
-                      {{ recipient.office_name }}
-                      <span class="text-gray-400 uppercase text-[10px]">
-                        ({{ recipient.recipient_type }})
-                      </span>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="flex items-center justify-between mt-4">
-            <h1 class="flex items-center text-lg font-semibold text-gray-800 ">
-              <FileInfoIcon class="mr-2 text-gray-500 size-5 hover:text-gray-700" />
-              Document Information
-            </h1>
-            <button type="button">
-
-            </button>
-          </div>
-
-
-          <div class="p-2 space-y-2">
-            <!-- ================= SUBJECT ================= -->
-            <div class="grid grid-cols-12 rounded-md bg-gray-50">
-              <div class="col-span-2 p-3">
-                <FrmLabel label="Subject:" />
-              </div>
-              <div class="col-span-10 p-3 pl-10 text-xs">
-                {{ document.subject }}
-              </div>
-            </div>
-
-            <!-- ================= REMARKS ================= -->
-            <div class="grid grid-cols-12 rounded-md bg-gray-50">
-              <div class="col-span-2 p-3">
-                <FrmLabel label="Remarks:" />
-              </div>
-              <div class="col-span-10 p-3 pl-10 text-xs">
-                {{ document.remarks ?? '—' }}
-              </div>
-            </div>
-
-            <!-- ================= SIGNATORIES ================= -->
-            <div class="grid grid-cols-12 rounded-md bg-gray-50">
-              <div class="col-span-2 p-3">
-                <FrmLabel label="Signatories:" />
-              </div>
-              <div class="col-span-10 p-3 pl-10">
-                <ul class="space-y-2">
-                  <li v-if="signatories.length === 0" class="text-xs text-gray-400">
-                    No signatories
-                  </li>
-                  <li v-for="signatory in signatories" :key="signatory.id">
-                    <div class="text-xs font-medium">
-                      {{ signatory.employee_name }}
+                    <!-- Main Files -->
+                    <div class="h-full col-span-1">
+                      <FrmLabel label="Main File:" class="mb-2" />
+                      <ul class="space-y-1">
+                        <li v-if="mainFiles.length === 0" class="p-2 bg-gray-100 border border-gray-200 rounded-lg">
+                          <div class="text-xs text-center">No file uploaded</div>
+                        </li>
+                        <li v-else v-for="file in mainFiles" :key="file.id"
+                          class="flex items-center p-2 bg-gray-100 border border-gray-200 rounded-lg">
+                          <BsFileEarmarkPdf class="mr-2 text-red-500" />
+                          <div>
+                            <div class="text-xs font-semibold">
+                              <a :href="fileUrl(file.file_path)" target="_blank" class="hover:underline">
+                                {{ file.file_name }}
+                              </a>
+                            </div>
+                            <div class="text-[10px] text-gray-400">
+                              {{ formatFileSize(file.file_size) }}
+                            </div>
+                          </div>
+                        </li>
+                      </ul>
                     </div>
-                    <div class="text-xs text-gray-500">
-                      {{ signatory.office_name }}
+
+                    <!-- Attachment Files -->
+                    <div class="h-full col-span-1">
+                      <FrmLabel label="Attached File:" class="mb-2" />
+                      <ul class="space-y-1">
+                        <li v-if="attachmentFiles.length === 0"
+                          class="p-2 bg-gray-100 border border-gray-200 rounded-lg">
+                          <div class="text-xs text-center">No file uploaded</div>
+                        </li>
+                        <li v-else v-for="file in attachmentFiles" :key="file.id"
+                          class="flex items-center p-2 bg-gray-100 border border-gray-200 rounded-lg">
+                          <BsFileEarmarkPdf class="mr-2 text-red-500" />
+                          <div>
+                            <div class="text-xs font-semibold">
+                              <a :href="fileUrl(file.file_path)" target="_blank" class="hover:underline">
+                                {{ file.file_name }}
+                              </a>
+                            </div>
+                            <div class="text-[10px] text-gray-400">
+                              {{ formatFileSize(file.file_size) }}
+                            </div>
+                          </div>
+                        </li>
+                      </ul>
                     </div>
-                  </li>
-                </ul>
-              </div>
-            </div>
 
-            <!-- ================= ATTACHMENTS ================= -->
-            <div class="grid grid-cols-12 rounded-md bg-gray-50">
-              <div class="col-span-2 p-3">
-                <FrmLabel label="Attachments:" />
-              </div>
-              <div class="col-span-10 p-3 pl-10">
-                <ul class="space-y-1">
-                  <li v-if="attachments.length === 0" class="text-xs text-gray-400">
-                    No attachments
-                  </li>
-
-                  <li v-for="file in attachments" :key="file.id" class="text-xs">
-                    {{ file.file_name }}
-                    <span class="text-[10px] text-gray-400">
-                      ({{ file.attachment_type }})
-                    </span>
-                  </li>
-                </ul>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

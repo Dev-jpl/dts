@@ -40,14 +40,31 @@ export interface DocumentSignatory {
     updated_at: string
 }
 
+// export interface DocumentAttachment {
+//     id: number
+//     document_no: string
+//     transaction_no: string
+//     file_name: string
+//     attachment_type: string
+//     office_id: string
+//     office_name: string
+//     created_at: string
+//     updated_at: string
+// }
+
 export interface DocumentAttachment {
     id: number
     document_no: string
     transaction_no: string
     file_name: string
-    attachment_type: string
+    file_path: string       // ← add
+    mime_type: string       // ← add
+    file_size: number       // ← add
+    attachment_type: 'main' | 'attachment'
     office_id: string
     office_name: string
+    created_by_id: string
+    created_by_name: string
     created_at: string
     updated_at: string
 }
