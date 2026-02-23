@@ -15,7 +15,9 @@ class DocumentAttachment extends Model
         'file_size',
         'attachment_type',
         'office_id',
-        'office_name'
+        'office_name',
+        'created_by_id',
+        'created_by_name',
     ];
 
     public function document()

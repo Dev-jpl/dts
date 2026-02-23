@@ -9,6 +9,7 @@ class DocumentTransaction extends Model
     protected $fillable = [
         'transaction_no',
         'transaction_type',
+        'parent_transaction_no',
         'routing',
         'document_no',
         'document_type',

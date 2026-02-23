@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use App\Models\Document;
 use App\Models\DocumentRecipient;
 use App\Models\DocumentAttachment;
+use App\Models\DocumentComment;
 use App\Models\DocumentLog;
 use App\Models\DocumentSignatory;
 use App\Models\DocumentTransaction;
@@ -102,15 +103,47 @@ class TransactionController extends Controller
             }
 
             // Attachments
-            $attachments = array_merge($payload['files'], $payload['attachments']);
-            foreach ($attachments as $file) {
+            // $attachments = array_merge($payload['files'], $payload['attachments']);
+            // foreach ($attachments as $file) {
+            //     DocumentAttachment::create([
+            //         'document_no'    => $documentNo,
+            //         'transaction_no' => $transactionNo,
+            //         'file_name'      => $file['name'],
+            //         'attachment_type' => 'main',
+            //         'office_id'      => $user->office_id ?? null,
+            //         'office_name'    => $user->office_name ?? null,
+            //     ]);
+            // }
+
+            // Attachments (files + attachments merged)
+            $allFiles = array_merge(
+                array_map(fn($f) => array_merge($f, ['attachment_type' => 'main']), $payload['files'] ?? []),
+                array_map(fn($f) => array_merge($f, ['attachment_type' => 'attachment']), $payload['attachments'] ?? [])
+            );
+
+            foreach ($allFiles as $file) {
+                $tempPath      = $file['temp_path'];
+                $filename      = basename($tempPath);
+                $permanentPath = "transactions/{$transactionNo}/{$filename}";
+
+                if (Storage::disk('public')->exists($tempPath)) {
+                    Storage::disk('public')->move($tempPath, $permanentPath);
+                } else {
+                    $permanentPath = $tempPath;
+                }
+
                 DocumentAttachment::create([
-                    'document_no'    => $documentNo,
-                    'transaction_no' => $transactionNo,
-                    'file_name'      => $file['name'],
-                    'attachment_type' => 'main',
-                    'office_id'      => $user->office_id ?? null,
-                    'office_name'    => $user->office_name ?? null,
+                    'document_no'     => $documentNo,
+                    'transaction_no'  => $transactionNo,
+                    'file_name'       => $file['name'],
+                    'file_path'       => $permanentPath,
+                    'mime_type'       => $file['type'],
+                    'file_size'       => $file['size_bytes'],
+                    'attachment_type' => $file['attachment_type'],
+                    'office_id'       => $user->office_id ?? null,
+                    'office_name'     => $user->office_name ?? null,
+                    'created_by_id'   => $user->id,
+                    'created_by_name' => $user->fullName(),
                 ]);
             }
 
@@ -137,44 +170,6 @@ class TransactionController extends Controller
             // Dispatch the event
             event(new DocumentActivityLoggedEvent($profilePayload));
 
-            // Log::info('Transaction created payload', ['payload' => $eventPayload]);
-            // Display in artisan serve terminal
-            // file_put_contents('php://stderr', 'Transaction created payload: ' . json_encode($eventPayload) . PHP_EOL);
-
-
-            //Log release transaction
-            // Decide routed office depending on routing type
-            // $routedOffice = $this->get_routed_office($payload['routing'], $transactionNo);
-            // $releasePayload = [
-            //     'document_no'    => $documentNo,
-            //     'transaction_no' => $transactionNo,
-            //     'status'        => 'Released',
-            //     'action_taken'   => $payload['actionTaken']['action'],
-            //     'remarks'       => $payload['remarks'],
-            //     // pass the authenticated user model
-            //     'user'          => $user,
-            //     // normalize office info to an array with explicit id/name/type
-            //     'office'        => [
-            //         'id'          => $user->office_id ?? null,
-            //         'office_name' => $user->office_name ?? null,
-            //         'office_type' => $user->office_type ?? null,
-            //     ],
-            //     'routing_type' => $payload['routing'],
-            //     'routed_office' => $routedOffice
-            //         ?
-            //         [
-            //             'id' => $routedOffice->office_id,
-            //             'office_name' => $routedOffice->office_name,
-            //             'office_type' => $routedOffice->recipient_type,
-            //         ]
-            //         : null,
-            //     'activity'      => null,
-            // ];
-
-            // // Dispatch the event
-            // event(new DocumentActivityLoggedEvent($releasePayload));
-
-
             // Commit if everything succeeds
             DB::commit();
 
@@ -187,7 +182,7 @@ class TransactionController extends Controller
                 ]
             ], 201);
         } catch (\Throwable $e) {
-            // ❌ Rollback if anything fails
+            // Rollback if anything fails
             DB::rollBack();
 
             return response()->json([
@@ -389,28 +384,7 @@ class TransactionController extends Controller
         ]);
     }
 
-    public function tempUpload(Request $request)
-    {
-        $request->validate([
-            'files.*' => 'required|file|max:10240', // 10MB limit
-        ]);
 
-        $tempPaths = [];
-        foreach ($request->file('files') as $file) {
-            $path = $file->store('temp', 'public'); // save to /storage/app/public/temp
-            $tempPaths[] = [
-                'original_name' => $file->getClientOriginalName(),
-                'temp_path'     => $path,
-                'size'          => $file->getSize(),
-                'mime_type'     => $file->getMimeType(),
-            ];
-        }
-
-        return response()->json([
-            'message' => 'Files uploaded to temp storage',
-            'data'    => $tempPaths,
-        ]);
-    }
 
     public function commitUpload(Request $request, $trxNo)
     {
@@ -447,5 +421,66 @@ class TransactionController extends Controller
             'message' => 'Files committed to permanent storage',
             'data'    => $savedFiles,
         ]);
+    }
+
+
+    public function tempUpload(Request $request)
+    {
+        $request->validate([
+            'files.*' => 'required|file|mimes:png,jpg,jpeg,pdf|max:10240',
+        ]);
+
+        $tempPaths = [];
+        foreach ($request->file('files') as $file) {
+            $path = $file->store('temp', 'public');
+            $tempPaths[] = [
+                'original_name' => $file->getClientOriginalName(),
+                'temp_path'     => $path,
+                'size'          => $file->getSize(),
+                'mime_type'     => $file->getMimeType(),
+                'url'           => Storage::disk('public')->url($path),
+            ];
+        }
+
+        // Return flat array — frontend maps over it directly
+        return response()->json($tempPaths);
+    }
+
+
+    public function getComments(string $trxNo): JsonResponse
+    {
+        $comments = DocumentComment::where('transaction_no', $trxNo)
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data'    => $comments,
+        ]);
+    }
+
+    public function postComment(Request $request, string $trxNo): JsonResponse
+    {
+        $request->validate([
+            'comment' => 'required|string|max:1000',
+        ]);
+
+        $user        = $request->user();
+        $transaction = DocumentTransaction::where('transaction_no', $trxNo)->firstOrFail();
+
+        $comment = DocumentComment::create([
+            'document_no'             => $transaction->document_no,
+            'transaction_no'          => $trxNo,
+            'office_id'               => $user->office_id,
+            'office_name'             => $user->office_name,
+            'comment'                 => $request->input('comment'),
+            'assigned_personnel_id'   => $user->id,
+            'assigned_personnel_name' => $user->fullName(),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'data'    => $comment,
+        ], 201);
     }
 }
