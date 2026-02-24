@@ -27,6 +27,7 @@ Route::middleware(['auth:api'])->group(function () {
         Route::post('/{trxNo}/upload/commit', [TransactionController::class, 'commitUpload']);
         Route::get('/{trxNo}/comments', [TransactionController::class, 'getComments']);    // ← add
         Route::post('/{trxNo}/comments', [TransactionController::class, 'postComment']);   // ← add
+        Route::post('/{trxNo}/receive',      [TransactionController::class, 'receiveDocument']);
     });
 
     Route::prefix('documents')->group(function () {

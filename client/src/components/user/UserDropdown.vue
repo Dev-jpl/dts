@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import { useAuthStore } from "@/stores/auth";
 import { useRouter } from "vue-router";
 
@@ -7,13 +7,13 @@ const open = ref(false);
 const router = useRouter();
 const auth = useAuthStore();
 
-const user = {
-  name: auth.user?.first_name || "John Dev",
-  email: auth.user?.email || "john@example.com",
-  office: auth.user?.office_name || "Main Office",
-  avatarUrl: "", // Add avatar logic if you have one
-};
-const defaultAvatar = "https://ui-avatars.com/api/?name=John+Dev";
+// ── FIX: use computed so it stays reactive to store changes after refresh ──
+// Plain object assignment at setup time captures null if fetchUser hasn't resolved yet.
+const user = computed(() => ({
+  name: auth.user?.first_name || "—",
+  email: auth.user?.email || "—",
+  office: auth.user?.office_name || "—",
+}))
 
 function toggleMenu() {
   open.value = !open.value;
@@ -28,11 +28,12 @@ function logout() {
   router.push("/login");
 }
 </script>
+
 <template>
   <div class="relative inline-block text-left" v-outside-click="closeDropdown">
     <!-- Trigger -->
     <button @click="toggleMenu"
-      class="flex items-start px-3 py-2 text-xs font-light text-gray-700 transition-all duration-200 border border-gray-100 rounded-full focus:outline-white focus:outline-2 focus:bg-white hover:bg-white hover:border hover:border-gray-200 ">
+      class="flex items-start px-3 py-2 text-xs font-light text-gray-700 transition-all duration-200 border border-gray-100 rounded-full focus:outline-white focus:outline-2 focus:bg-white hover:bg-white hover:border hover:border-gray-200">
       <div class="flex items-center">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
           class="sm:mr-2 size-5">
@@ -48,7 +49,6 @@ function logout() {
     <!-- Dropdown Menu -->
     <transition name="fade">
       <div v-if="open" class="absolute right-0 z-50 w-48 mt-2 bg-white border border-gray-200 rounded-md shadow-xl">
-        <!-- //Assigned office div -->
         <div>
           <div class="px-4 py-3 border-b border-gray-200">
             <p class="text-xs text-gray-500">Assigned Office</p>
@@ -56,14 +56,16 @@ function logout() {
           </div>
         </div>
 
-
-
         <ul class="py-1 text-sm text-gray-700">
           <li>
-            <RouterLink :to="{ name: 'user-profile' }" class="block px-4 py-2 hover:bg-gray-100">Profile</RouterLink>
+            <RouterLink :to="{ name: 'user-profile' }" class="block px-4 py-2 hover:bg-gray-100">
+              Profile
+            </RouterLink>
           </li>
           <li>
-            <RouterLink :to="{ name: 'user-settings' }" class="block px-4 py-2 hover:bg-gray-100">Settings</RouterLink>
+            <RouterLink :to="{ name: 'user-settings' }" class="block px-4 py-2 hover:bg-gray-100">
+              Settings
+            </RouterLink>
           </li>
           <li>
             <button @click="logout" class="w-full px-4 py-2 text-left text-red-500 hover:bg-red-50">

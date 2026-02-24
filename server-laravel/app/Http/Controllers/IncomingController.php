@@ -150,25 +150,42 @@ class IncomingController extends Controller
 
     // -------------------------------------------------------------------------
     // GET /api/incoming/filters — dynamic dropdown options
+    // FIX: qualify all ambiguous column references with table prefix
     // -------------------------------------------------------------------------
     public function filters(Request $request)
     {
         $officeId = $request->user()->office_id;
 
-        $baseIds = DocumentTransactionLog::incomingForOffice($officeId)->pluck('transaction_no');
+        // Get base transaction_nos scoped to this office
+        $baseIds = DocumentTransactionLog::incomingForOffice($officeId)
+            ->pluck('document_transaction_logs.transaction_no'); // ← qualified
 
-        $documentTypes = DocumentTransactionLog::whereIn('transaction_no', $baseIds)
+        // Distinct document types
+        $documentTypes = DocumentTransactionLog::whereIn('document_transaction_logs.transaction_no', $baseIds)
             ->join('document_transactions as dt', 'dt.transaction_no', '=', 'document_transaction_logs.transaction_no')
-            ->distinct()->orderBy('dt.document_type')->pluck('dt.document_type')
-            ->filter()->values();
+            ->select('dt.document_type')
+            ->distinct()
+            ->orderBy('dt.document_type')
+            ->pluck('dt.document_type')
+            ->filter()
+            ->values();
 
-        $routingTypes = DocumentTransactionLog::whereIn('transaction_no', $baseIds)
+        // Distinct routing types
+        $routingTypes = DocumentTransactionLog::whereIn('document_transaction_logs.transaction_no', $baseIds)
             ->join('document_transactions as dt', 'dt.transaction_no', '=', 'document_transaction_logs.transaction_no')
-            ->distinct()->pluck('dt.routing')->filter()->values();
+            ->select('dt.routing')
+            ->distinct()
+            ->pluck('dt.routing')
+            ->filter()
+            ->values();
 
-        $senderOffices = DocumentTransactionLog::whereIn('transaction_no', $baseIds)
-            ->select('office_id', 'office_name')->distinct('office_id')
-            ->get()->unique('office_id')->values();
+        // Distinct sender offices
+        $senderOffices = DocumentTransactionLog::whereIn('document_transaction_logs.transaction_no', $baseIds)
+            ->select('document_transaction_logs.office_id', 'document_transaction_logs.office_name')
+            ->distinct()
+            ->get()
+            ->unique('office_id')
+            ->values();
 
         return response()->json([
             'success'        => true,

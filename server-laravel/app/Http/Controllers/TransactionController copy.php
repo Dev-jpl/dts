@@ -1,34 +1,23 @@
 <?php
 
-// ================================================================
-// UPDATED TransactionController.php — Full action methods
-// with TransactionStatusService integrated.
-//
-// Changes from previous version:
-//  1. releaseDocument → sets status to 'Processing'
-//  2. receiveDocument → calls TransactionStatusService::evaluate()
-//  3. Both return updated transaction status in response
-//
-// Also includes the show() fix: uncomment 'logs' eager load
-// ================================================================
-
 namespace App\Http\Controllers;
 
 use App\Events\DocumentActivityLoggedEvent;
 use App\Http\Requests\StoreTransactionRequest;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Illuminate\Http\JsonResponse;
 use App\Models\Document;
+use App\Models\DocumentRecipient;
 use App\Models\DocumentAttachment;
 use App\Models\DocumentComment;
-use App\Services\TransactionStatusService;
+use App\Models\DocumentLog;
+use App\Models\DocumentSignatory;
 use App\Models\DocumentTransaction;
 use App\Models\DocumentTransactionLog;
-use App\Models\DocumentRecipient;
-use App\Models\DocumentSignatory;
-use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 class TransactionController extends Controller
 {
@@ -207,6 +196,65 @@ class TransactionController extends Controller
         }
     }
 
+    private function get_routed_office(string $routingType, string $transactionNo)
+    {
+        $recipients = DocumentRecipient::where('transaction_no', $transactionNo)
+            ->orderBy('sequence')
+            ->get();
+
+        switch ($routingType) {
+            case 'single':
+                return $recipients->first();
+
+            case 'multiple':
+                // Return all recipients, caller can loop and create logs
+                return $recipients;
+
+            case 'sequence':
+                foreach ($recipients as $recipient) {
+                    $alreadyReceived = \App\Models\DocumentTransactionLog::where('transaction_no', $transactionNo)
+                        ->where('routed_office_id', $recipient->office_id)
+                        ->where('status', 'Received')
+                        ->exists();
+
+                    if (!$alreadyReceived) {
+                        return $recipient;
+                    }
+                }
+                return null;
+
+            default:
+                return null;
+        }
+    }
+
+
+    public function show(string $trxNo): JsonResponse
+    {
+        $transaction = DocumentTransaction::with([
+            'document',
+            'recipients',
+            'signatories',
+            'attachments',
+            'logs',
+            // 'comments'
+        ])
+            ->where('transaction_no', $trxNo)
+            ->first();
+
+        if (!$transaction) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Transaction not found.',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $transaction
+        ]);
+    }
+
     public function show_logs($trxNo)
     {
         $logs = DocumentTransactionLog::where('transaction_no', $trxNo)
@@ -253,6 +301,154 @@ class TransactionController extends Controller
         return response()->json($grouped);
     }
 
+
+    public function storeLog(Request $request, $trxNo)
+    {
+        $user = $request->user();
+
+        $validated = $request->validate(
+            [
+                'status' => 'required|string|in:Profiled,Received,Released,Archived,Returned To Sender,Forwarded',
+                'action_taken' => 'nullable|string|max:100',
+                'activity' => 'required|string',
+                'remarks' => 'nullable|string',
+                'assigned_personnel_id' => 'required|uuid',
+                'assigned_personnel_name' => 'required|string|max:150',
+                'office_id' => 'required|string|max:50',
+                'office_name' => 'required|string|max:150',
+            ]
+        );
+    }
+
+
+    public function releaseDocument(Request $request, $trxNo)
+    {
+        $validated = $request->validate([
+            'remarks'       => 'nullable|string',
+            'routed_office' => 'nullable|array',
+        ]);
+
+        $user = $request->user(); // ✅ correct way
+        $transaction = DocumentTransaction::with(['document', 'logs'])->where('transaction_no', $trxNo)->first();
+        $transaction->status = 'Released';
+        $transaction->save();
+        $logs = $transaction->logs;
+
+        $log = DocumentTransactionLog::create([
+            'transaction_no'          => $trxNo,
+            'document_no'             => $transaction->document_no,
+            'status'                  => 'Released',
+            'action_taken'            => $transaction->action_type,
+            'activity'                => 'Released',
+            'remarks'                 => $validated['remarks'] ?? null,
+            'assigned_personnel_id'   => $user->id,
+            'assigned_personnel_name' => $user->fullName(),
+            'office_id'               => $user->office_id,
+            'office_name'             => $user->office_name,
+            'routed_office_id'        => $validated['routed_office']['id'] ?? null,
+            'routed_office_name'      => $validated['routed_office']['office_name'] ?? null,
+        ]);
+
+        return response()->json([
+            'message' => 'Document released successfully',
+            'data'    => $log,
+        ], 201);
+    }
+
+    public function upload(Request $request, $trxNo)
+    {
+        $request->validate([
+            'files.*' => 'required|file|max:10240', // 10MB limit
+        ]);
+
+        $user = $request->user();
+
+        $uploadedFiles = [];
+        foreach ($request->file('files') as $file) {
+            $path = $file->store("transactions/{$trxNo}", 'public');
+
+            $record = DocumentAttachment::create([
+                'transaction_no' => $trxNo,
+                'filename'       => $file->getClientOriginalName(),
+                'path'           => $path,
+                'size'           => $file->getSize(),
+                'mime_type'      => $file->getMimeType(),
+                'uploaded_by'    => $user->id,
+                'office_id'      => $user->office_id,
+            ]);
+
+            $uploadedFiles[] = $record;
+        }
+
+        return response()->json([
+            'message' => 'Files uploaded successfully',
+            'data'    => $uploadedFiles,
+        ]);
+    }
+
+
+
+    public function commitUpload(Request $request, $trxNo)
+    {
+        $request->validate([
+            'files' => 'required|array',
+            'files.*.temp_path' => 'required|string',
+        ]);
+
+        $user = $request->user();
+        $savedFiles = [];
+
+        foreach ($request->input('files') as $fileData) {
+            $tempPath = $fileData['temp_path'];
+            $filename = basename($tempPath);
+
+            // Move file from temp to permanent folder
+            $newPath = "transactions/{$trxNo}/{$filename}";
+            Storage::disk('public')->move($tempPath, $newPath);
+
+            $record = DocumentAttachment::create([
+                'transaction_no' => $trxNo,
+                'filename'       => $fileData['original_name'],
+                'path'           => $newPath,
+                'size'           => $fileData['size'],
+                'mime_type'      => $fileData['mime_type'],
+                'uploaded_by'    => $user->id,
+                'office_id'      => $user->office_id,
+            ]);
+
+            $savedFiles[] = $record;
+        }
+
+        return response()->json([
+            'message' => 'Files committed to permanent storage',
+            'data'    => $savedFiles,
+        ]);
+    }
+
+
+    public function tempUpload(Request $request)
+    {
+        $request->validate([
+            'files.*' => 'required|file|mimes:png,jpg,jpeg,pdf|max:10240',
+        ]);
+
+        $tempPaths = [];
+        foreach ($request->file('files') as $file) {
+            $path = $file->store('temp', 'public');
+            $tempPaths[] = [
+                'original_name' => $file->getClientOriginalName(),
+                'temp_path'     => $path,
+                'size'          => $file->getSize(),
+                'mime_type'     => $file->getMimeType(),
+                'url'           => Storage::disk('public')->url($path),
+            ];
+        }
+
+        // Return flat array — frontend maps over it directly
+        return response()->json($tempPaths);
+    }
+
+
     public function getComments(string $trxNo): JsonResponse
     {
         $comments = DocumentComment::where('transaction_no', $trxNo)
@@ -290,18 +486,16 @@ class TransactionController extends Controller
         ], 201);
     }
 
-    // ────────────────────────────────────────────────────────────
-    // show() — UNCOMMENT 'logs' so frontend has full log data
-    // ────────────────────────────────────────────────────────────
-    public function show(string $trxNo): JsonResponse
+    public function receiveDocument(Request $request, string $trxNo): JsonResponse
     {
-        $transaction = DocumentTransaction::with([
-            'document',
-            'recipients',
-            'signatories',
-            'attachments',
-            'logs',          // ← WAS COMMENTED OUT — UNCOMMENT THIS
-        ])
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'remarks' => 'nullable|string|max:255',
+        ]);
+
+        // 1. Load transaction with recipients and logs
+        $transaction = DocumentTransaction::with(['recipients', 'logs'])
             ->where('transaction_no', $trxNo)
             ->first();
 
@@ -312,106 +506,27 @@ class TransactionController extends Controller
             ], 404);
         }
 
-        return response()->json([
-            'success' => true,
-            'data'    => $transaction,
-        ]);
-    }
+        // 2. Guard: Transaction must have been Released first
+        $hasBeenReleased = $transaction->logs
+            ->where('status', 'Released')
+            ->isNotEmpty();
 
-    // ────────────────────────────────────────────────────────────
-    // releaseDocument — updated to set status = 'Processing'
-    // ────────────────────────────────────────────────────────────
-    public function releaseDocument(Request $request, string $trxNo): JsonResponse
-    {
-        $validated = $request->validate([
-            'remarks'       => 'nullable|string',
-            'routed_office' => 'nullable|array',
-        ]);
-
-        $user        = $request->user();
-        $transaction = DocumentTransaction::with(['document', 'logs', 'recipients'])
-            ->where('transaction_no', $trxNo)
-            ->first();
-
-        if (!$transaction) {
-            return response()->json(['success' => false, 'message' => 'Transaction not found.'], 404);
-        }
-
-        // Guard: prevent double-release
-        $alreadyReleased = $transaction->logs->where('status', 'Released')->isNotEmpty();
-        if ($alreadyReleased) {
+        if (!$hasBeenReleased) {
             return response()->json([
                 'success' => false,
-                'message' => 'Document has already been released.',
-            ], 409);
-        }
-
-        DB::transaction(function () use ($trxNo, $transaction, $validated, $user) {
-            // 1. Create the Released log
-            DocumentTransactionLog::create([
-                'transaction_no'          => $trxNo,
-                'document_no'             => $transaction->document_no,
-                'status'                  => 'Released',
-                'action_taken'            => $transaction->action_type,
-                'activity'                => "Document released by {$user->office_name}",
-                'remarks'                 => $validated['remarks'] ?? null,
-                'assigned_personnel_id'   => $user->id,
-                'assigned_personnel_name' => $user->fullName(),
-                'office_id'               => $user->office_id,
-                'office_name'             => $user->office_name,
-                'routed_office_id'        => $validated['routed_office']['id'] ?? null,
-                'routed_office_name'      => $validated['routed_office']['office_name'] ?? null,
-            ]);
-
-            // 2. Always set status to Processing on release
-            $transaction->update(['status' => 'Processing']);
-        });
-
-        // Return updated transaction so frontend can refresh
-        $transaction->refresh()->load(['document', 'recipients', 'signatories', 'attachments', 'logs']);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Document released successfully.',
-            'data'    => $transaction,
-        ], 201);
-    }
-
-    // ────────────────────────────────────────────────────────────
-    // receiveDocument — updated with TransactionStatusService
-    // ────────────────────────────────────────────────────────────
-    public function receiveDocument(Request $request, string $trxNo): JsonResponse
-    {
-        $user      = $request->user();
-        $validated = $request->validate([
-            'remarks' => 'nullable|string|max:255',
-        ]);
-
-        $transaction = DocumentTransaction::with(['recipients', 'logs'])
-            ->where('transaction_no', $trxNo)
-            ->first();
-
-        if (!$transaction) {
-            return response()->json(['success' => false, 'message' => 'Transaction not found.'], 404);
-        }
-
-        // Guard: must be Released first
-        if ($transaction->logs->where('status', 'Released')->isEmpty()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Document has not been released yet.',
+                'message' => 'Document has not been released yet. Cannot receive.',
             ], 422);
         }
 
-        // Guard: not completed
-        if ($transaction->status === 'Completed') {
+        // 3. Guard: Transaction must not be Completed or Archived
+        if (in_array($transaction->status, ['Completed'])) {
             return response()->json([
                 'success' => false,
-                'message' => 'Transaction is already completed.',
+                'message' => 'Transaction is already completed. No further actions allowed.',
             ], 422);
         }
 
-        // Guard: must be a registered default recipient
+        // 4. Guard: Current user's office must be a registered recipient (default type only)
         $isRecipient = $transaction->recipients
             ->where('office_id', $user->office_id)
             ->where('recipient_type', 'default')
@@ -424,24 +539,35 @@ class TransactionController extends Controller
             ], 403);
         }
 
-        // Guard: no duplicate receive
-        if ($transaction->logs->where('status', 'Received')->where('office_id', $user->office_id)->isNotEmpty()) {
+        // 5. Guard: Prevent duplicate Receive from same office
+        $alreadyReceived = $transaction->logs
+            ->where('status', 'Received')
+            ->where('office_id', $user->office_id)
+            ->isNotEmpty();
+
+        if ($alreadyReceived) {
             return response()->json([
                 'success' => false,
                 'message' => 'Your office has already received this document.',
             ], 409);
         }
 
-        // Guard: Sequential — must be active step
+        // 6. Guard (Sequential): Enforce sequence order
+        //    The receiving office must be the current active step.
         if (strtolower($transaction->routing) === 'sequential') {
-            $sorted = $transaction->recipients
+            $recipients = $transaction->recipients
                 ->where('recipient_type', 'default')
                 ->sortBy('sequence');
 
             $activeRecipient = null;
-            foreach ($sorted as $r) {
-                if ($transaction->logs->where('status', 'Received')->where('office_id', $r->office_id)->isEmpty()) {
-                    $activeRecipient = $r;
+            foreach ($recipients as $recipient) {
+                $stepReceived = $transaction->logs
+                    ->where('status', 'Received')
+                    ->where('office_id', $recipient->office_id)
+                    ->isNotEmpty();
+
+                if (!$stepReceived) {
+                    $activeRecipient = $recipient;
                     break;
                 }
             }
@@ -449,113 +575,50 @@ class TransactionController extends Controller
             if (!$activeRecipient || $activeRecipient->office_id !== $user->office_id) {
                 return response()->json([
                     'success' => false,
-                    'message' => "It is not your office's turn. Sequential order must be followed.",
+                    'message' => 'It is not your office\'s turn to receive this document. Sequential order must be followed.',
                 ], 422);
             }
         }
 
-        DB::transaction(function () use ($trxNo, $transaction, $validated, $user) {
-            // 1. Create the Received log
-            DocumentTransactionLog::create([
-                'transaction_no'          => $trxNo,
-                'document_no'             => $transaction->document_no,
-                'status'                  => 'Received',
-                'action_taken'            => $transaction->action_type,
-                'activity'                => "Document received by {$user->office_name}",
-                'remarks'                 => $validated['remarks'] ?? null,
-                'assigned_personnel_id'   => $user->id,
-                'assigned_personnel_name' => $user->fullName(),
-                'office_id'               => $user->office_id,
-                'office_name'             => $user->office_name,
-                'routed_office_id'        => null,
-                'routed_office_name'      => null,
-            ]);
+        // 7. Create the Received log entry
+        $log = DocumentTransactionLog::create([
+            'transaction_no'          => $trxNo,
+            'document_no'             => $transaction->document_no,
+            'status'                  => 'Received',
+            'action_taken'            => $transaction->action_type,
+            'activity'                => "Document received by {$user->office_name}",
+            'remarks'                 => $validated['remarks'] ?? null,
+            'assigned_personnel_id'   => $user->id,
+            'assigned_personnel_name' => $user->fullName(),
+            'office_id'               => $user->office_id,
+            'office_name'             => $user->office_name,
+            'routed_office_id'        => null,
+            'routed_office_name'      => null,
+        ]);
 
-            // 2. Evaluate and update transaction status
-            TransactionStatusService::evaluate($trxNo);
-        });
+        // 8. For Multiple routing: check if ALL recipients have now received
+        //    If so, we can optionally flag the transaction as ready (no auto-archive, just informational)
+        if (strtolower($transaction->routing) === 'multiple') {
+            $defaultRecipients = $transaction->recipients
+                ->where('recipient_type', 'default');
 
-        // Return the fully updated transaction
-        $transaction->refresh()->load(['document', 'recipients', 'signatories', 'attachments', 'logs']);
+            $allReceived = $defaultRecipients->every(function ($recipient) use ($transaction, $log) {
+                // Include the log we just created
+                return $transaction->logs
+                    ->where('status', 'Received')
+                    ->where('office_id', $recipient->office_id)
+                    ->isNotEmpty()
+                    || $log->office_id === $recipient->office_id;
+            });
+
+            // Note: We don't auto-archive. The originating office archives manually.
+            // But we could emit an event here to notify the origin.
+        }
 
         return response()->json([
             'success' => true,
             'message' => 'Document received successfully.',
-            'data'    => $transaction,
-        ], 201);
-    }
-
-    // ────────────────────────────────────────────────────────────
-    // returnToSender — updated with TransactionStatusService
-    // ────────────────────────────────────────────────────────────
-    public function returnToSender(Request $request, string $trxNo): JsonResponse
-    {
-        $user      = $request->user();
-        $validated = $request->validate([
-            'remarks' => 'required|string|max:255',
-        ]);
-
-        $transaction = DocumentTransaction::with(['recipients', 'logs'])
-            ->where('transaction_no', $trxNo)
-            ->first();
-
-        if (!$transaction) {
-            return response()->json(['success' => false, 'message' => 'Transaction not found.'], 404);
-        }
-
-        // Guard: must have received first
-        $hasReceived = $transaction->logs
-            ->where('status', 'Received')
-            ->where('office_id', $user->office_id)
-            ->isNotEmpty();
-
-        if (!$hasReceived) {
-            return response()->json([
-                'success' => false,
-                'message' => 'You must receive the document before returning it.',
-            ], 422);
-        }
-
-        // Guard: not already returned
-        $alreadyReturned = $transaction->logs
-            ->where('status', 'Returned To Sender')
-            ->where('office_id', $user->office_id)
-            ->isNotEmpty();
-
-        if ($alreadyReturned) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Your office has already returned this document.',
-            ], 409);
-        }
-
-        DB::transaction(function () use ($trxNo, $transaction, $validated, $user) {
-            DocumentTransactionLog::create([
-                'transaction_no'          => $trxNo,
-                'document_no'             => $transaction->document_no,
-                'status'                  => 'Returned To Sender',
-                'action_taken'            => $transaction->action_type,
-                'activity'                => "Document returned to sender by {$user->office_name}",
-                'remarks'                 => $validated['remarks'],
-                'assigned_personnel_id'   => $user->id,
-                'assigned_personnel_name' => $user->fullName(),
-                'office_id'               => $user->office_id,
-                'office_name'             => $user->office_name,
-                'routed_office_id'        => $transaction->office_id,   // back to origin
-                'routed_office_name'      => $transaction->office_name,
-            ]);
-
-            // Evaluate — for Single/Sequential a return may still trigger Completed
-            // (per design: a returned doc means that recipient is "done")
-            TransactionStatusService::evaluate($trxNo);
-        });
-
-        $transaction->refresh()->load(['document', 'recipients', 'signatories', 'attachments', 'logs']);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Document returned to sender successfully.',
-            'data'    => $transaction,
+            'data'    => $log,
         ], 201);
     }
 }

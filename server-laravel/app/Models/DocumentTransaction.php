@@ -10,6 +10,7 @@ class DocumentTransaction extends Model
         'transaction_no',
         'transaction_type',
         'parent_transaction_no',
+        'transaction_status', //->default processing, completed, cancelled
         'routing',
         'document_no',
         'document_type',

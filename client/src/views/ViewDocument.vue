@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import ModalDialog from "@/components/ui/modals/ModalDialog.vue";
 import HistoryLogs from "@/components/view-document/HistoryLogs.vue";
 import { useDocumentInformation } from "@/composables/useDocumentInformation";
 import { computed, onMounted, ref } from "vue";
 import { RiArrowLeftLine } from "vue-icons-plus/ri";
 import { FiClock, FiMessageCircle } from "vue-icons-plus/fi";
+import { useActionVisibility } from '@/composables/useActionVisibility'
+import { useToast } from '@/composables/useToast'
 
 const { documentInformation, updateDocumentInfo } = useDocumentInformation();
 
@@ -16,87 +17,12 @@ const formattedDate = computed(() =>
   }),
 );
 
-// const setDocument = () => {
-//   updateDocumentInfo({
-//     date: new Date(),
-//     documentType: {
-//       id: "04dc5eb5-4d79-48e1-8427-685811f78c30",
-//       code: "MOA",
-//       type: "Memorandum of Agreement",
-//     },
-//     documentTypeID: "",
-//     actionTaken: { id: 1, action: "Appropriate Action" },
-//     actionID: "",
-//     originType: "Internal",
-//     sender: "",
-//     sender_position: "",
-//     sender_office: "",
-//     sender_email: "",
-//     subject:
-//       "PAL-TO/ORS amounting to P40,564.00, to obligate payment of plane tickets for the following SysADD Personnel, Mla-CDO-Mla, July 21-25, 2025, to attend and participate in the Harmonization and Updates on the Human Resource Operations and Management in the Department of Agriculture: 1. Mark Harris Jamilan 2. Teresita Cruz 3. Charmaine Ellyn Resco; and 4. John Patrick Lachica",
-//     remarks:
-//       "PAL-TO/ORS amounting to P40,564.00, to obligate payment of plane tickets for the following SysADD Personnel, Mla-CDO-Mla, July 21-25, 2025, to attend and participate in the Harmonization and Updates on the Human Resource Operations and Management in the Department of Agriculture: 1. Mark Harris Jamilan 2. Teresita Cruz 3. Charmaine Ellyn Resco; and 4. John Patrick Lachica",
-//     signatories: [],
-//     recipients: [
-//       {
-//         region: "OSEC",
-//         service: "INTERNAL AUDIT SERVICE (IAS)",
-//         office: "OFFICE OF THE DIRECTOR",
-//         office_code: "0100010100",
-//       },
-
-//       {
-//         region: "OSEC",
-//         service: "INTERNAL AUDIT SERVICE (IAS)",
-//         office: "OPERATIONS AUDIT DIVISION (OAD)",
-//         office_code: "0100010200",
-//       },
-//       {
-//         region: "OSEC",
-//         service: "INTERNAL AUDIT SERVICE (IAS)",
-//         office: "MANAGEMENT AUDIT DIVISION (MAD)",
-//         office_code: "0100010300",
-//       },
-//       {
-//         region: "OSEC",
-//         service: "PLANNING AND MONITORING SERVICE (PMS)",
-//         office: "OFFICE OF THE DIRECTOR",
-//         office_code: "0100020100",
-//       },
-//       {
-//         region: "OSEC",
-//         service: "PLANNING AND MONITORING SERVICE (PMS)",
-//         office: "INVESTMENT PROGRAMMING DIVISION (IPD)",
-//         office_code: "0100020200",
-//       },
-//     ],
-
-//     files: [],
-//     attachments: [],
-//     isSendToMany: true,
-//     isBindDocument: false,
-//     bindedDocuments: [],
-//     isDone: false,
-//   });
-// };
-
 import { useRoute, useRouter } from "vue-router";
 import DocumentComments from "@/components/view-document/DocumentComments.vue";
 import DocumentInformation from "@/components/view-document/DocumentInformation.vue";
 import BaseButton from "@/components/ui/buttons/BaseButton.vue";
 import GroupButton from "@/components/ui/buttons/GroupButton.vue";
-import ReleaseModal from "@/components/view-document/ReleaseModal.vue";
-import ReturnToSenderModal from "@/components/view-document/ReturnToSenderModal.vue";
-import ForwardDocModal from "@/components/view-document/ForwardDocModal.vue";
 import { useTransaction } from "@/composables/useTransaction";
-
-const route = useRoute();
-// const { fetchTransaction, transaction, trxLogs, loading, logsError, logsLoading } = useTransaction();
-
-const {
-  fetchTransaction, transaction, trxLogs, loading, logsError, logsLoading,
-  comments, commentsLoading, postComment    // ← add
-} = useTransaction()
 
 onMounted(async () => {
   const transaction_no = route.params.trxNo as string;
@@ -104,80 +30,98 @@ onMounted(async () => {
   documentInformation.documentNumber = transaction.value?.document_no || "N/A";
 });
 
-// const comments = ref([
-//   {
-//     user: "John Doe",
-//     comment: "Reviewed the market linkage section...",
-//     service: "Agribusiness and Marketing Assistance Service (AMAS)",
-//     office: "Agribusiness and Investment Promotion Division (AIPD)",
-//     date: new Date(Date.now() - 60 * 60 * 1000).toISOString(), // 1hr ago
-//   },
-//   {
-//     user: "Maria Santos",
-//     comment: "Please clarify the funding breakdown...",
-//     service: "Agribusiness and Marketing Assistance Service (AMAS)",
-//     office: "Investment Research Unit",
-//     date: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2hr ago
-//   },
-//   {
-//     user: "Leo Mercado",
-//     comment: "I’ve formatted the document...",
-//     service: "Agribusiness and Marketing Assistance Service (AMAS)",
-//     office: "Project Coordination Office",
-//     date: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(), // 3hr ago
-//   },
-//   {
-//     user: "Karen Uy",
-//     comment: "Section on crop insurance looks solid...",
-//     service: "Agribusiness and Marketing Assistance Service (AMAS)",
-//     office: "Policy Analysis Team",
-//     date: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(), // 4hr ago
-//   },
-// ]);
-
 const activeTab = ref<"History Logs" | "Comments">("History Logs");
 
-const modalReceiveOpen = ref(false);
+// ── Modals ───────────────────────────────────────────────────────
+import ReceiveModal from '@/components/view-document/ReceiveModal.vue'
+import ReleaseModal from '@/components/view-document/ReleaseModal.vue'
+import ForwardDocModal from '@/components/view-document/ForwardDocModal.vue'
+import ReturnToSenderModal from '@/components/view-document/ReturnToSenderModal.vue'
+import ModalDialog from '@/components/ui/modals/ModalDialog.vue'
 
-const toggleReceiveModal = () => {
-  modalReceiveOpen.value = !modalReceiveOpen.value;
-};
+// ── Toast ────────────────────────────────────────────────────────
+const toast = useToast()
 
-const modalReleaseOpen = ref(false);
+// ── Transaction state ────────────────────────────────────────────
+const {
+  fetchTransaction,
+  transaction,
+  trxLogs,
+  loading,
+  logsError,
+  logsLoading,
+  fetchTransactionLogs,
+  comments,
+  commentsLoading,
+  postComment,
+} = useTransaction()
 
-const toggleReleaseModal = () => {
-  modalReleaseOpen.value = !modalReleaseOpen.value;
-};
+// ── Action visibility (reactive, based on logs + current user) ───
+const {
+  canReceive,
+  canRelease,
+  canForward,
+  canReturn,
+  canReply,
+  canArchive,
+} = useActionVisibility(transaction)
 
-const modalArchiveOpen = ref(false);
+// ── Modal toggles (keep as-is) ───────────────────────────────────
+const modalReceiveOpen = ref(false)
+const modalReleaseOpen = ref(false)
+const modalForwardOpen = ref(false)
+const modalReturnOpen = ref(false)
+const modalReplyOpen = ref(false)
+const modalArchiveOpen = ref(false)
 
-const toggleArchiveModal = () => {
-  modalArchiveOpen.value = !modalArchiveOpen.value;
-};
+const toggleReceiveModal = () => { modalReceiveOpen.value = !modalReceiveOpen.value }
+const toggleReleaseModal = () => { modalReleaseOpen.value = !modalReleaseOpen.value }
+const toggleForwardModal = () => { modalForwardOpen.value = !modalForwardOpen.value }
+const toggleReturnModal = () => { modalReturnOpen.value = !modalReturnOpen.value }
+const toggleReplyModal = () => { modalReplyOpen.value = !modalReplyOpen.value }
+const toggleArchiveModal = () => { modalArchiveOpen.value = !modalArchiveOpen.value }
 
-const modalForwardOpen = ref(false);
+// ── Post-action handlers (refresh logs + toast) ──────────────────
+const onDocumentReceived = async () => {
+  await fetchTransactionLogs(transaction.value!.transaction_no)
+  toast.success('Document Received', 'Receipt has been logged in the transaction history.')
+}
 
-const toggleForwardModal = () => {
-  modalForwardOpen.value = !modalForwardOpen.value;
-};
+const onDocumentReleased = async () => {
+  await fetchTransactionLogs(transaction.value!.transaction_no)
+  toast.success('Document Released', 'The document has been sent to the recipient(s).')
+}
 
-const modalReplyOpen = ref(false);
+const onDocumentForwarded = async () => {
+  await fetchTransactionLogs(transaction.value!.transaction_no)
+  toast.success('Document Forwarded', 'The document has been forwarded to the next office.')
+}
 
-const toggleReplyModal = () => {
-  modalReplyOpen.value = !modalReplyOpen.value;
-};
+const onDocumentReturned = async () => {
+  await fetchTransactionLogs(transaction.value!.transaction_no)
+  toast.warning('Document Returned', 'The document has been sent back to the originating office.')
+}
 
-const router = useRouter();
+const onDocumentArchived = async () => {
+  await fetchTransaction(transaction.value!.transaction_no) // full refresh to update status
+  await fetchTransactionLogs(transaction.value!.transaction_no)
+  toast.success('Document Archived', 'The document has been closed and stored for records.')
+}
+
+// ── Reply routing (unchanged) ────────────────────────────────────
+const router = useRouter()
 const replyDocument = () => {
-  router.push({ name: "profile-document-reply", params: { documentNo: documentInformation.documentNumber } });
-  modalReplyOpen.value = !modalReplyOpen.value;
-};
+  router.push({ name: 'profile-document-reply', params: { documentNo: documentInformation.documentNumber } })
+  modalReplyOpen.value = false
+}
 
-const modalReturnOpen = ref(false);
-
-const toggleReturnModal = () => {
-  modalReturnOpen.value = !modalReturnOpen.value;
-};
+// ── Mount ────────────────────────────────────────────────────────
+const route = useRoute()
+onMounted(async () => {
+  const transaction_no = route.params.trxNo as string
+  await fetchTransaction(transaction_no)
+  documentInformation.documentNumber = transaction.value?.document_no || 'N/A'
+})
 </script>
 <template>
 
@@ -192,86 +136,73 @@ const toggleReturnModal = () => {
           Back
         </button>
 
-        <!-- Actions -->
+        <!-- Actions Bar -->
         <div v-if="transaction"
           class="flex ml-4 border border-gray-300 divide-x divide-gray-300 rounded-md overflow-clip">
-          <!-- Receive Document Action -->
-          <div>
-            <!-- Modal Button -->
-            <ModalDialog title="Receive Document" :isOpen="modalReceiveOpen" @close="toggleReceiveModal"
-              @confirm="toggleReceiveModal">
-              Are you sure you want to receive this document?
-            </ModalDialog>
-            <!-- Receive Button -->
+
+          <!-- ── RECEIVE ── -->
+          <div v-if="canReceive">
+            <ReceiveModal :isOpen="modalReceiveOpen" :toggleReceiveModal="toggleReceiveModal"
+              :trxNo="transaction.transaction_no" @received="onDocumentReceived" />
             <GroupButton :isActive="modalReceiveOpen" @click="toggleReceiveModal" variant="primary">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
                 stroke="currentColor" class="mr-1.5 size-4">
                 <path stroke-linecap="round" stroke-linejoin="round"
                   d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m.75 12 3 3m0 0 3-3m-3 3v-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
               </svg>
-              <span> Receive </span>
+              <span>Receive</span>
             </GroupButton>
           </div>
 
-          <!-- Release Action -->
-          <div>
-            <!-- Modal Button -->
-            <ReleaseModal :isOpen="modalReleaseOpen" :toggleReleaseModal="toggleReleaseModal" />
-
-            <!-- Release Button -->
+          <!-- ── RELEASE ── -->
+          <div v-if="canRelease">
+            <ReleaseModal :isOpen="modalReleaseOpen" :toggleReleaseModal="toggleReleaseModal"
+              @released="onDocumentReleased" />
             <GroupButton :isActive="modalReleaseOpen" @click="toggleReleaseModal" variant="primary">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
                 stroke="currentColor" class="mr-1.5 size-4">
                 <path stroke-linecap="round" stroke-linejoin="round"
                   d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m6.75 12-3-3m0 0-3 3m3-3v6m-1.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
               </svg>
-              <span> Release </span>
+              <span>Release</span>
             </GroupButton>
           </div>
 
-          <!-- Forward Action -->
-          <div>
-            <!-- Modal Button -->
-            <ForwardDocModal :isOpen="modalForwardOpen" :toggleForwardModal="toggleForwardModal" />
-
-            <!-- Archive Button -->
+          <!-- ── FORWARD ── -->
+          <div v-if="canForward">
+            <ForwardDocModal :isOpen="modalForwardOpen" :toggleForwardModal="toggleForwardModal"
+              @forwarded="onDocumentForwarded" />
             <GroupButton :isActive="modalForwardOpen" @click="toggleForwardModal" variant="primary"
               class="flex items-center text-xs">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
                 stroke="currentColor" class="mr-1.5 size-4">
                 <path stroke-linecap="round" stroke-linejoin="round"
-                  d="m16.49 12 3.75-3.751m0 0-3.75-3.75m3.75 3.75H3.74V19.5" />
+                  d="m16.49 12 3.75 3.75m0 0-3.75 3.75m3.75-3.75H3.74V4.499" />
               </svg>
-              <span> Forward </span>
+              <span>Forward</span>
             </GroupButton>
           </div>
 
-          <!-- Return Action -->
-          <div>
-            <!-- Modal Button -->
-            <ReturnToSenderModal :isOpen="modalReturnOpen" :toggleReturnModal="toggleReturnModal" />
-
-            <!-- Archive Button -->
+          <!-- ── RETURN TO SENDER ── -->
+          <div v-if="canReturn">
+            <ReturnToSenderModal :isOpen="modalReturnOpen" :toggleReturnModal="toggleReturnModal"
+              @returned="onDocumentReturned" />
             <GroupButton :isActive="modalReturnOpen" @click="toggleReturnModal" variant="primary"
               class="flex items-center text-xs">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
                 stroke="currentColor" class="mr-1.5 size-4">
                 <path stroke-linecap="round" stroke-linejoin="round" d="m15 15-6 6m0 0-6-6m6 6V9a6 6 0 0 1 12 0v3" />
               </svg>
-
-              <span> Return to sender </span>
+              <span>Return to Sender</span>
             </GroupButton>
           </div>
 
-          <!-- Reply Action -->
-          <div>
-            <!-- Modal Button -->
+          <!-- ── REPLY ── -->
+          <div v-if="canReply">
             <ModalDialog title="Reply to Document" :isOpen="modalReplyOpen" @close="toggleReplyModal"
               @confirm="replyDocument">
               Are you sure you want to reply to this document?
             </ModalDialog>
-
-            <!-- Archive Button -->
             <GroupButton :isActive="modalReplyOpen" @click="toggleReplyModal" variant="primary"
               class="flex items-center text-xs">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
@@ -279,20 +210,16 @@ const toggleReturnModal = () => {
                 <path stroke-linecap="round" stroke-linejoin="round"
                   d="M7.49 12 3.74 8.248m0 0 3.75-3.75m-3.75 3.75h16.5V19.5" />
               </svg>
-
-
-              <span> Reply </span>
+              <span>Reply</span>
             </GroupButton>
           </div>
 
-          <!-- Archive Action -->
-          <div>
-            <!-- Modal Button -->
+          <!-- ── ARCHIVE ── -->
+          <div v-if="canArchive">
             <ModalDialog title="Archive Document" :isOpen="modalArchiveOpen" @close="toggleArchiveModal"
-              @confirm="toggleArchiveModal">
-              Are you sure you want to archive this document?
+              @confirm="onDocumentArchived">
+              Are you sure you want to archive this document? This action cannot be undone.
             </ModalDialog>
-            <!-- Archive Button -->
             <GroupButton :isActive="modalArchiveOpen" @click="toggleArchiveModal" variant="primary"
               class="flex items-center text-xs">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
@@ -300,9 +227,10 @@ const toggleReturnModal = () => {
                 <path stroke-linecap="round" stroke-linejoin="round"
                   d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0-3-3m3 3 3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z" />
               </svg>
-              <span> Archive </span>
+              <span>Archive</span>
             </GroupButton>
           </div>
+
         </div>
       </div>
 
