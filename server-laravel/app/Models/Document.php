@@ -13,7 +13,7 @@ class Document extends Model
         'origin_type',
         'subject',
         'remarks',
-        'status',
+        'status', //->for removal in favor of latest log status
         'office_id',
         'office_name',
         'created_by_id',
@@ -54,7 +54,7 @@ class Document extends Model
 
     public function logs()
     {
-        return $this->hasMany(DocumentLog::class, 'document_no', 'document_no');
+        return $this->hasMany(DocumentTransactionLog::class, 'document_no', 'document_no');
     }
 
     public function comments()

@@ -52,7 +52,9 @@ export function useActionVisibility(transaction: ReturnType<typeof computed<Tran
     /** Is this office a registered default recipient? */
     const isRecipient = computed(() =>
         (transaction.value?.recipients ?? []).some(
-            r => r.recipient_type === 'default' && r.office_id === myOfficeId.value
+            r => r.recipient_type === 'default'
+                && r.office_id === myOfficeId.value
+                && r.isActive !== false   // ← treat undefined as active (backward compat)
         )
     )
 

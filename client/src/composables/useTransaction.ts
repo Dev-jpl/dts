@@ -128,7 +128,8 @@ export function useTransaction(initial?: Transaction) {
     }
 
     async function forwardDocument(trxNo: string, payload: {
-        routed_office: any
+        routed_office: { id: string; office_name: string }
+        action: { action: string }       // ← ADD this field
         remarks?: string | null
     }) {
         try {

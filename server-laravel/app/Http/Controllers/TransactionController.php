@@ -558,4 +558,121 @@ class TransactionController extends Controller
             'data'    => $transaction,
         ], 201);
     }
+
+    public function forwardDocument(Request $request, string $trxNo): JsonResponse
+    {
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'routed_office'             => 'required|array',
+            'routed_office.id'          => 'required|string',
+            'routed_office.office_name' => 'required|string',
+            'action'                    => 'required|array',
+            'action.action'             => 'required|string',  // the action label
+            'remarks'                   => 'nullable|string|max:255',
+        ]);
+
+        $transaction = DocumentTransaction::with(['recipients', 'logs'])
+            ->where('transaction_no', $trxNo)
+            ->first();
+
+        if (!$transaction) {
+            return response()->json(['success' => false, 'message' => 'Transaction not found.'], 404);
+        }
+
+        // Guard: must have Received first
+        $hasReceived = $transaction->logs
+            ->where('status', 'Received')
+            ->where('office_id', $user->office_id)
+            ->isNotEmpty();
+
+        if (!$hasReceived) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You must receive the document before forwarding it.',
+            ], 422);
+        }
+
+        // Guard: not already forwarded by this office
+        $alreadyForwarded = $transaction->logs
+            ->where('status', 'Forwarded')
+            ->where('office_id', $user->office_id)
+            ->isNotEmpty();
+
+        if ($alreadyForwarded) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Your office has already forwarded this document.',
+            ], 409);
+        }
+
+        // Guard: transaction must not be completed
+        if ($transaction->status === 'Completed') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Transaction is already completed.',
+            ], 422);
+        }
+
+        $routedOffice = $validated['routed_office'];
+        $action       = $validated['action'];
+
+        DB::transaction(function () use ($trxNo, $transaction, $validated, $user, $routedOffice, $action) {
+
+            // 1. Log the Forward
+            DocumentTransactionLog::create([
+                'transaction_no'          => $trxNo,
+                'document_no'             => $transaction->document_no,
+                'status'                  => 'Forwarded',
+                'action_taken'            => $action['action'],  // new action for next office
+                'activity'                => "Document forwarded to {$routedOffice['office_name']} by {$user->office_name}",
+                'remarks'                 => $validated['remarks'] ?? null,
+                'assigned_personnel_id'   => $user->id,
+                'assigned_personnel_name' => $user->fullName(),
+                'office_id'               => $user->office_id,
+                'office_name'             => $user->office_name,
+                'routed_office_id'        => $routedOffice['id'],
+                'routed_office_name'      => $routedOffice['office_name'],
+            ]);
+
+            // 2. Mark the current office's recipient row as inactive (they've stepped out)
+            DocumentRecipient::where('transaction_no', $trxNo)
+                ->where('office_id', $user->office_id)
+                ->update(['isActive' => false]);
+
+            // 3. Add the new office as a recipient
+            //    Use firstOrCreate to prevent duplicates if re-forwarding to same office
+            DocumentRecipient::firstOrCreate(
+                [
+                    'transaction_no' => $trxNo,
+                    'office_id'      => $routedOffice['id'],
+                ],
+                [
+                    'document_no'     => $transaction->document_no,
+                    'recipient_type'  => 'default',
+                    'office_name'     => $routedOffice['office_name'],
+                    'sequence'        => null,   // forward is not sequential
+                    'created_by_id'   => $user->id,
+                    'created_by_name' => $user->fullName(),
+                    'isActive'        => true,
+                ]
+            );
+
+            // 4. Re-activate in case it was a previous recipient that was deactivated
+            DocumentRecipient::where('transaction_no', $trxNo)
+                ->where('office_id', $routedOffice['id'])
+                ->update(['isActive' => true]);
+
+            // Status stays Processing — new office must Receive
+            $transaction->update(['status' => 'Processing']);
+        });
+
+        $transaction->refresh()->load(['document', 'recipients', 'signatories', 'attachments', 'logs']);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Document forwarded successfully.',
+            'data'    => $transaction,
+        ], 201);
+    }
 }

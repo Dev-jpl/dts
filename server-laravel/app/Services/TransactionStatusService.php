@@ -89,8 +89,10 @@ class TransactionStatusService
      */
     private static function isSingleComplete(DocumentTransaction $trx, $logs): bool
     {
+        // Only look at ACTIVE recipients
         $recipient = $trx->recipients
             ->where('recipient_type', 'default')
+            ->where('isActive', true)   // ← ADD THIS
             ->first();
 
         if (!$recipient) return false;
@@ -104,7 +106,8 @@ class TransactionStatusService
     private static function isMultipleComplete(DocumentTransaction $trx, $logs): bool
     {
         $defaultRecipients = $trx->recipients
-            ->where('recipient_type', 'default');
+            ->where('recipient_type', 'default')
+            ->where('isActive', true);   // ← ADD THIS
 
         if ($defaultRecipients->isEmpty()) return false;
 
@@ -112,6 +115,7 @@ class TransactionStatusService
             fn($r) => self::officeDone($r->office_id, $logs)
         );
     }
+
 
     /**
      * Sequential routing: the LAST recipient in the sequence must have Received.
@@ -121,21 +125,21 @@ class TransactionStatusService
     {
         $defaultRecipients = $trx->recipients
             ->where('recipient_type', 'default')
+            ->where('isActive', true)    // ← ADD THIS
             ->sortBy('sequence');
 
         if ($defaultRecipients->isEmpty()) return false;
 
-        // If anyone returned, sequence is broken — not completed
         $anyReturned = $logs->where('status', 'Returned To Sender')->isNotEmpty();
         if ($anyReturned) return false;
 
-        // All recipients in sequence must have Received
         return $defaultRecipients->every(
             fn($r) => $logs->where('status', 'Received')
                 ->where('office_id', $r->office_id)
                 ->isNotEmpty()
         );
     }
+
 
     /**
      * An office is "done" if they have Received OR Returned To Sender.

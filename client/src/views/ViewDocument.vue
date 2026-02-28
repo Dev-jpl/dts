@@ -171,7 +171,7 @@ onMounted(async () => {
           <!-- ── FORWARD ── -->
           <div v-if="canForward">
             <ForwardDocModal :isOpen="modalForwardOpen" :toggleForwardModal="toggleForwardModal"
-              @forwarded="onDocumentForwarded" />
+              :trxNo="transaction.transaction_no" :transaction="transaction" @forwarded="onDocumentForwarded" />
             <GroupButton :isActive="modalForwardOpen" @click="toggleForwardModal" variant="primary"
               class="flex items-center text-xs">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
