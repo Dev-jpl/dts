@@ -77,3 +77,8 @@ coverage/
 
 # OS
 .DS_Store
+
+
+#Documentations
+.pdf
+.docs
