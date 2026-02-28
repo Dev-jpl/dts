@@ -23,6 +23,7 @@ class DocumentTransactionLog extends Model
         'action_taken',
         'activity',
         'remarks',
+        'reason',
         'assigned_personnel_id',
         'assigned_personnel_name',
     ];

@@ -1,13 +1,18 @@
 <script setup lang="ts">
 import { defineProps, computed } from "vue";
 
-const props = defineProps<{
-  btnText: string;
-  action: () => void;
+const props = withDefaults(defineProps<{
+  btnText?: string;
+  action?: () => void;
   className?: string;
   backgroundClass?: string;
   textColorClass?: string;
-}>();
+  disabled?: boolean;
+}>(), {
+  btnText: '',
+  action: undefined,
+  disabled: false,
+});
 
 // Defaults
 const defaultBackground = "bg-teal-700 hover:bg-teal-800";
@@ -23,9 +28,9 @@ const buttonClass = computed(() => {
 </script>
 
 <template>
-  <button type="button" @click="action" :class="buttonClass">
+  <button type="button" @click="action" :class="buttonClass" :disabled="disabled">
     <slot></slot>
-    <span class="hidden sm:block">
+    <span v-if="btnText" class="hidden sm:block">
       {{ btnText }}
     </span>
   </button>

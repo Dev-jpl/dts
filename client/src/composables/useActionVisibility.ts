@@ -1,194 +1,211 @@
-import { computed } from 'vue'
+import { computed, type Ref } from 'vue'
 import type { Transaction } from '@/types/transaction'
 import { useAuthStore } from '@/stores/auth'
+
+// FI action types — all others are FA
+const FI_TYPES = ['Dissemination of Information', 'Your Information']
 
 /**
  * Derives which action buttons are visible for the current user
  * based on transaction type, routing, log history, and the user's office.
  */
-export function useActionVisibility(transaction: ReturnType<typeof computed<Transaction | null>>) {
+export function useActionVisibility(transaction: Ref<Transaction | null>) {
     const auth = useAuthStore()
 
-    // ── Derived log state ─────────────────────────────────────────────────────
+    // ── Base derivations ──────────────────────────────────────────────────────
 
-    /** All logs for this transaction */
     const logs = computed(() => transaction.value?.logs ?? [])
-
-    /** Current user's office_id */
+    const recipients = computed(() => transaction.value?.recipients ?? [])
     const myOfficeId = computed(() => auth.user?.office_id ?? null)
-
-    /** The originating office of the transaction */
     const originOfficeId = computed(() => transaction.value?.office_id ?? null)
 
-    /** Is the current user the originator? */
     const isOriginator = computed(() =>
-        myOfficeId.value && originOfficeId.value === myOfficeId.value
+        !!myOfficeId.value && originOfficeId.value === myOfficeId.value
     )
 
-    /** Has this transaction been Released at least once? */
+    const isFA = computed(() =>
+        !FI_TYPES.includes(transaction.value?.action_type ?? '')
+    )
+
     const isReleased = computed(() =>
-        logs.value.some(log => log.status === 'Released')
+        logs.value.some(l => l.status === 'Released')
     )
 
-    /** Has the current user's office already received this document? */
     const myOfficeHasReceived = computed(() =>
-        logs.value.some(
-            log => log.status === 'Received' && log.office_id === myOfficeId.value
-        )
+        logs.value.some(l => l.status === 'Received' && l.office_id === myOfficeId.value)
     )
 
-    /** Has the current user's office already returned this document? */
     const myOfficeHasReturned = computed(() =>
-        logs.value.some(
-            log => log.status === 'Returned To Sender' && log.office_id === myOfficeId.value
+        logs.value.some(l => l.status === 'Returned To Sender' && l.office_id === myOfficeId.value)
+    )
+
+    const myOfficeHasDone = computed(() =>
+        logs.value.some(l => l.status === 'Done' && l.office_id === myOfficeId.value)
+    )
+
+    const myOfficeHasForwarded = computed(() =>
+        logs.value.some(l => l.status === 'Forwarded' && l.office_id === myOfficeId.value)
+    )
+
+    const myOfficeHasTerminalAction = computed(() =>
+        myOfficeHasDone.value || myOfficeHasForwarded.value || myOfficeHasReturned.value
+    )
+
+    const isProcessing = computed(() => transaction.value?.status === 'Processing')
+    const isDraft = computed(() => transaction.value?.status === 'Draft')
+
+    const docStatus = computed(() => transaction.value?.document?.status)
+
+    // ── Recipient role checks ─────────────────────────────────────────────────
+
+    /** Is my office an active recipient of ANY type (default, cc, bcc)? */
+    const isActiveAnyRecipient = computed(() =>
+        recipients.value.some(
+            r => r.office_id === myOfficeId.value && r.isActive !== false
         )
     )
 
-    /** Is the transaction archived/completed? */
-    const isCompleted = computed(() =>
-        transaction.value?.status === 'Completed'
-    )
-
-    /** Is this office a registered default recipient? */
-    const isRecipient = computed(() =>
-        (transaction.value?.recipients ?? []).some(
-            r => r.recipient_type === 'default'
-                && r.office_id === myOfficeId.value
-                && r.isActive !== false   // ← treat undefined as active (backward compat)
+    /** Is my office an active DEFAULT recipient? */
+    const isActiveDefaultRecipient = computed(() =>
+        recipients.value.some(
+            r => r.office_id === myOfficeId.value
+                && r.recipient_type === 'default'
+                && r.isActive !== false
         )
     )
 
-    // ── Sequential: is it currently this office's turn? ───────────────────────
+    // ── Sequential turn guard ─────────────────────────────────────────────────
+
+    /**
+     * For sequential routing: only the lowest-sequence office that has no
+     * terminal action can act. For non-sequential, always true.
+     */
     const isActiveSequentialStep = computed(() => {
-        if (transaction.value?.routing !== 'Sequential') return true // non-sequential, not restricted
+        if (transaction.value?.routing !== 'Sequential') return true
 
-        const defaultRecipients = (transaction.value?.recipients ?? [])
+        const defaultRecipients = recipients.value
             .filter(r => r.recipient_type === 'default')
             .sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0))
 
-        for (const recipient of defaultRecipients) {
-            const stepReceived = logs.value.some(
-                l => l.status === 'Received' && l.office_id === recipient.office_id
+        for (const r of defaultRecipients) {
+            const hasReceived = logs.value.some(
+                l => l.status === 'Received' && l.office_id === r.office_id
             )
-            if (!stepReceived) {
-                // The first un-received step is the active one
-                return recipient.office_id === myOfficeId.value
+            if (!hasReceived) {
+                return r.office_id === myOfficeId.value
             }
         }
         return false
     })
 
-    // ── All recipients done (for archive eligibility) ────────────────────────
-    const allRecipientsDone = computed(() => {
-        const routing = transaction.value?.routing
-        const defaultRecipients = (transaction.value?.recipients ?? [])
-            .filter(r => r.recipient_type === 'default')
-
-        if (!defaultRecipients.length) return false
-
-        return defaultRecipients.every(recipient => {
-            const received = logs.value.some(
-                l => l.status === 'Received' && l.office_id === recipient.office_id
-            )
-            const returned = logs.value.some(
-                l => l.status === 'Returned To Sender' && l.office_id === recipient.office_id
-            )
-            return received || returned
-        })
-    })
-
     // ── Button visibility ─────────────────────────────────────────────────────
 
     /**
-     * RECEIVE
-     * Show when:
-     * - Document has been released
-     * - Current office is a recipient
-     * - Current office has NOT already received
-     * - (Sequential) It's this office's turn
-     * - Transaction is not completed
+     * RECEIVE — any active recipient type (default, cc, bcc)
      */
     const canReceive = computed(() =>
         isReleased.value &&
-        isRecipient.value &&
+        isActiveAnyRecipient.value &&
         !myOfficeHasReceived.value &&
-        !myOfficeHasReturned.value &&
         isActiveSequentialStep.value &&
-        !isCompleted.value
+        isProcessing.value
     )
 
     /**
-     * RELEASE
-     * Show when:
-     * - Current office is the originator
-     * - Transaction has not been Released yet (prevent double-release)
-     *   OR you may want to allow re-release after return — adjust if needed
+     * RELEASE — originator, transaction still Draft
      */
     const canRelease = computed(() =>
         isOriginator.value &&
-        !isReleased.value &&
-        !isCompleted.value
+        isDraft.value
     )
 
     /**
-     * FORWARD
-     * Show when:
-     * - Current office has received the document
-     * - Transaction is not completed
+     * SUBSEQUENT RELEASE — active default recipient who has already received,
+     * and the transaction is still Processing (not Returned/Completed).
+     */
+    const canSubsequentRelease = computed(() =>
+        isActiveDefaultRecipient.value &&
+        myOfficeHasReceived.value &&
+        !myOfficeHasTerminalAction.value &&
+        isProcessing.value
+    )
+
+    /**
+     * MARK AS DONE — FA only, active default recipient who has received,
+     * has not yet taken a terminal action.
+     */
+    const canMarkAsDone = computed(() =>
+        isFA.value &&
+        isActiveDefaultRecipient.value &&
+        myOfficeHasReceived.value &&
+        !myOfficeHasTerminalAction.value &&
+        isProcessing.value
+    )
+
+    /**
+     * FORWARD — active default recipient who has received, no terminal action yet.
      */
     const canForward = computed(() =>
+        isActiveDefaultRecipient.value &&
         myOfficeHasReceived.value &&
-        !isCompleted.value
+        !myOfficeHasTerminalAction.value &&
+        isProcessing.value
     )
 
     /**
-     * RETURN TO SENDER
-     * Show when:
-     * - Current office has received the document
-     * - Has not already returned
-     * - Transaction is not completed
+     * RETURN TO SENDER — active default recipient who has received,
+     * has not already returned.
      */
     const canReturn = computed(() =>
+        isActiveDefaultRecipient.value &&
         myOfficeHasReceived.value &&
         !myOfficeHasReturned.value &&
-        !isCompleted.value
+        !myOfficeHasTerminalAction.value &&
+        isProcessing.value
     )
 
     /**
-     * REPLY
-     * Show when:
-     * - Current office has received the document
-     * - Transaction is not completed
+     * REPLY — any active recipient type (default, cc, bcc) who has received.
      */
     const canReply = computed(() =>
+        isActiveAnyRecipient.value &&
         myOfficeHasReceived.value &&
-        !isCompleted.value
+        isProcessing.value
     )
 
     /**
-     * ARCHIVE
-     * Show when:
-     * - Current office is the originator (only origin can archive)
-     * - All recipients have received or returned
-     * - Transaction is not already completed
+     * CLOSE — originator only, document not Draft and not already Closed.
      */
-    const canArchive = computed(() =>
+    const canClose = computed(() =>
         isOriginator.value &&
-        allRecipientsDone.value &&
-        !isCompleted.value
+        docStatus.value !== 'Draft' &&
+        docStatus.value !== 'Closed'
+    )
+
+    /**
+     * MANAGE RECIPIENTS — originator, transaction Processing.
+     */
+    const canManageRecipients = computed(() =>
+        isOriginator.value &&
+        isProcessing.value
     )
 
     return {
         canReceive,
         canRelease,
+        canSubsequentRelease,
+        canMarkAsDone,
         canForward,
         canReturn,
         canReply,
-        canArchive,
-        // expose for debugging / display purposes
+        canClose,
+        canManageRecipients,
+        // expose for debug / display
         isOriginator,
         isReleased,
+        isFA,
         myOfficeHasReceived,
-        isCompleted,
+        isProcessing,
+        isDraft,
     }
 }

@@ -1,12 +1,12 @@
 import API from '@/api'
-import type { Transaction } from '@/types/transaction'
+import type { DocumentNote, Transaction } from '@/types/transaction'
 import { ref, watch } from 'vue'
 
 /**
  * useTransaction
  *
  * KEY FIX for button reactivity:
- * Every action (receive, release, forward, return) now returns the full
+ * Every action (receive, release, forward, return, etc.) returns the full
  * updated transaction from the backend. We call setTransaction() with that
  * response, which updates transaction.value (including .logs).
  * useActionVisibility reads from transaction.value.logs, so it reacts
@@ -21,9 +21,8 @@ export function useTransaction(initial?: Transaction) {
     const logsLoading = ref(false)
     const logsError = ref<string | null>(null)
 
-    const comments = ref<any[]>([])
-    const commentsLoading = ref(false)
-    const commentsError = ref<string | null>(null)
+    const notes = ref<DocumentNote[]>([])
+    const notesLoading = ref(false)
 
     // ── Core setters ──────────────────────────────────────────────────────────
 
@@ -57,45 +56,45 @@ export function useTransaction(initial?: Transaction) {
         }
     }
 
-    // ── Comments ──────────────────────────────────────────────────────────────
+    // ── Official Notes ────────────────────────────────────────────────────────
 
-    async function fetchComments(trxNo: string) {
-        commentsLoading.value = true
-        commentsError.value = null
+    async function fetchNotes(docNo: string) {
+        notesLoading.value = true
         try {
-            const { data } = await API.get(`/transactions/${trxNo}/comments`)
-            comments.value = data.data
-        } catch (e: any) {
-            commentsError.value = e.message
+            const { data } = await API.get(`/documents/${docNo}/notes`)
+            notes.value = data.data
         } finally {
-            commentsLoading.value = false
+            notesLoading.value = false
         }
     }
 
-    async function postComment(trxNo: string, comment: string) {
-        const { data } = await API.post(`/transactions/${trxNo}/comments`, { comment })
-        comments.value.push(data.data)
+    async function postNote(docNo: string, payload: { transaction_no: string; note: string }) {
+        const { data } = await API.post(`/documents/${docNo}/notes`, payload)
+        notes.value.unshift(data.data)
         return data
     }
 
     // ── Actions — each updates transaction.value directly from response ───────
-    // This is the key fix: the backend now returns the full updated transaction
-    // after each action. We call setTransaction() with it, which makes
-    // transaction.value.logs reactive and triggers useActionVisibility to recompute.
 
     async function releaseDocument(trxNo: string, payload: {
         remarks?: string | null
         routed_office?: any
     }) {
-        try {
-            const { data } = await API.post(`/transactions/${trxNo}/release`, payload)
-            // Update transaction state from response (includes updated logs)
-            if (data.data) setTransaction(data.data)
-            await fetchTransactionLogs(trxNo)
-            return data
-        } catch (e: any) {
-            throw e
-        }
+        const { data } = await API.post(`/transactions/${trxNo}/release`, payload)
+        if (data.data) setTransaction(data.data)
+        await fetchTransactionLogs(trxNo)
+        return data
+    }
+
+    async function subsequentRelease(trxNo: string, payload: {
+        target_office_id: string
+        target_office_name: string
+        remarks?: string | null
+    }) {
+        const { data } = await API.post(`/transactions/${trxNo}/subsequent-release`, payload)
+        if (data.data) setTransaction(data.data)
+        await fetchTransactionLogs(trxNo)
+        return data
     }
 
     async function receiveDocument(trxNo: string, payload: {
@@ -103,7 +102,6 @@ export function useTransaction(initial?: Transaction) {
     }) {
         try {
             const { data } = await API.post(`/transactions/${trxNo}/receive`, payload)
-            // ✅ Update transaction.value with fresh data including new logs
             if (data.data) setTransaction(data.data)
             await fetchTransactionLogs(trxNo)
             return data
@@ -113,8 +111,34 @@ export function useTransaction(initial?: Transaction) {
         }
     }
 
+    async function markAsDone(trxNo: string, payload: {
+        remarks?: string | null
+    }) {
+        const { data } = await API.post(`/transactions/${trxNo}/done`, payload)
+        if (data.data) setTransaction(data.data)
+        await fetchTransactionLogs(trxNo)
+        return data
+    }
+
+    async function forwardDocument(trxNo: string, payload: {
+        routed_office: { id: string; office_name: string }
+        action: { action: string }
+        remarks?: string | null
+    }) {
+        try {
+            const { data } = await API.post(`/transactions/${trxNo}/forward`, payload)
+            if (data.data) setTransaction(data.data)
+            await fetchTransactionLogs(trxNo)
+            return data
+        } catch (e: any) {
+            const msg = e.response?.data?.message || e.message || 'Failed to forward document'
+            throw new Error(msg)
+        }
+    }
+
     async function returnToSender(trxNo: string, payload: {
-        remarks: string
+        reason: string
+        remarks?: string | null
     }) {
         try {
             const { data } = await API.post(`/transactions/${trxNo}/return`, payload)
@@ -127,20 +151,35 @@ export function useTransaction(initial?: Transaction) {
         }
     }
 
-    async function forwardDocument(trxNo: string, payload: {
-        routed_office: { id: string; office_name: string }
-        action: { action: string }       // ← ADD this field
+    async function replyToDocument(trxNo: string, payload: {
+        subject: string
+        action_type: string
+        document_type: string
         remarks?: string | null
+        recipients: Array<{ office_id: string; office_name: string; recipient_type: string }>
     }) {
-        try {
-            const { data } = await API.post(`/transactions/${trxNo}/forward`, payload)
-            if (data.data) setTransaction(data.data)
-            await fetchTransactionLogs(trxNo)
-            return data
-        } catch (e: any) {
-            const msg = e.response?.data?.message || e.message || 'Failed to forward document'
-            throw new Error(msg)
-        }
+        const { data } = await API.post(`/transactions/${trxNo}/reply`, payload)
+        if (data.data) setTransaction(data.data)
+        await fetchTransactionLogs(trxNo)
+        return data
+    }
+
+    async function manageRecipients(trxNo: string, payload: {
+        add?: Array<{ office_id: string; office_name: string; recipient_type: string; sequence?: number }>
+        remove?: number[]
+        reorder?: Array<{ id: number; sequence: number }>
+    }) {
+        const { data } = await API.patch(`/transactions/${trxNo}/recipients`, payload)
+        if (data.data) setTransaction(data.data)
+        await fetchTransactionLogs(trxNo)
+        return data
+    }
+
+    async function closeDocument(docNo: string, payload: {
+        remarks: string
+    }) {
+        const { data } = await API.post(`/documents/${docNo}/close`, payload)
+        return data
     }
 
     // ── Helper: full refresh (transaction + formatted logs) ───────────────────
@@ -155,10 +194,7 @@ export function useTransaction(initial?: Transaction) {
     watch(
         () => transaction.value?.transaction_no,
         (trxNo) => {
-            if (trxNo) {
-                fetchTransactionLogs(trxNo)
-                fetchComments(trxNo)
-            }
+            if (trxNo) fetchTransactionLogs(trxNo)
         },
         { immediate: true }
     )
@@ -171,24 +207,28 @@ export function useTransaction(initial?: Transaction) {
         loading,
         error,
 
-        // Logs (formatted for HistoryLogs component)
+        // Logs
         trxLogs,
         logsLoading,
         logsError,
         fetchTransactionLogs,
 
+        // Official Notes
+        notes,
+        notesLoading,
+        fetchNotes,
+        postNote,
+
         // Actions
         releaseDocument,
+        subsequentRelease,
         receiveDocument,
-        returnToSender,
+        markAsDone,
         forwardDocument,
-
-        // Comments
-        comments,
-        commentsLoading,
-        commentsError,
-        fetchComments,
-        postComment,
+        returnToSender,
+        replyToDocument,
+        manageRecipients,
+        closeDocument,
 
         // Utility
         refreshTransaction,

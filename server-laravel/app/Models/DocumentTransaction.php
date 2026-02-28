@@ -10,7 +10,6 @@ class DocumentTransaction extends Model
         'transaction_no',
         'transaction_type',
         'parent_transaction_no',
-        'transaction_status', //->default processing, completed, cancelled
         'routing',
         'document_no',
         'document_type',
@@ -19,11 +18,13 @@ class DocumentTransaction extends Model
         'subject',
         'remarks',
         'status',
+        'urgency_level',
+        'due_date',
         'office_id',
         'office_name',
         'created_by_id',
         'created_by_name',
-        'isActive'
+        'isActive',
     ];
 
     protected $primaryKey = 'transaction_no';

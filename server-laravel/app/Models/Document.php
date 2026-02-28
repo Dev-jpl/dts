@@ -13,12 +13,14 @@ class Document extends Model
         'origin_type',
         'subject',
         'remarks',
-        'status', //->for removal in favor of latest log status
+        'status',
+        'allow_copy',
+        'qr_code',
         'office_id',
         'office_name',
         'created_by_id',
         'created_by_name',
-        'isActive'
+        'isActive',
     ];
 
     protected $primaryKey = 'document_no';
@@ -60,6 +62,11 @@ class Document extends Model
     public function comments()
     {
         return $this->hasMany(DocumentComment::class, 'document_no', 'document_no');
+    }
+
+    public function notes()
+    {
+        return $this->hasMany(DocumentNote::class, 'document_no', 'document_no');
     }
 
     // Many-to-Many

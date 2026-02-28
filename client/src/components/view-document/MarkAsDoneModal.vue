@@ -8,76 +8,56 @@ import { useTransaction } from '@/composables/useTransaction'
 
 const props = defineProps({
     isOpen: { type: Boolean, default: false },
-    toggleReturnModal: { type: Function, required: true },
+    toggleModal: { type: Function, required: true },
     trxNo: { type: String, required: true },
 })
 
 const emit = defineEmits<{
-    (e: 'returned'): void
+    (e: 'done'): void
 }>()
 
-const reason = ref('')
 const remarks = ref('')
 const loading = ref(false)
 const errorMsg = ref<string | null>(null)
 
-const { returnToSender } = useTransaction()
+const { markAsDone } = useTransaction()
 
-// Pre-defined return reasons
-const REASONS = [
-    'Incomplete requirements',
-    'Wrong recipient',
-    'Needs revision',
-    'Requires additional approval',
-    'Other',
-]
-
-async function handleReturn() {
-    if (!reason.value) {
-        errorMsg.value = 'Please select a reason for returning this document.'
-        return
-    }
-
+async function handleDone() {
     errorMsg.value = null
     loading.value = true
-
     try {
-        await returnToSender(props.trxNo, {
-            reason: reason.value,
-            remarks: remarks.value || null,
-        })
-        emit('returned')
+        await markAsDone(props.trxNo, { remarks: remarks.value || null })
+        emit('done')
         handleClose()
     } catch (e: any) {
-        errorMsg.value = e.message || 'Failed to return document.'
+        errorMsg.value = e.response?.data?.message || e.message || 'Failed to mark as done.'
     } finally {
         loading.value = false
     }
 }
 
 function handleClose() {
-    reason.value = ''
     remarks.value = ''
     errorMsg.value = null
-    props.toggleReturnModal()
+    props.toggleModal()
 }
 </script>
 
 <template>
-    <LargeModal title="Return to Sender" :isOpen="props.isOpen" @close="handleClose">
+    <LargeModal title="Mark as Done" :isOpen="props.isOpen" @close="handleClose">
 
         <div class="px-4 py-2 space-y-4">
 
-            <!-- Warning banner -->
-            <div class="flex items-start gap-3 p-3 text-sm text-amber-700 border border-amber-200 rounded-lg bg-amber-50">
+            <!-- Info banner -->
+            <div class="flex items-start gap-3 p-3 text-sm text-green-700 border border-green-200 rounded-lg bg-green-50">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
                     stroke="currentColor" class="size-5 mt-0.5 shrink-0">
                     <path stroke-linecap="round" stroke-linejoin="round"
-                        d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.008v.008H12v-.008Z" />
+                        d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                 </svg>
                 <span>
-                    Returning this document will halt all pending routing and notify the originating office.
-                    This action cannot be undone.
+                    Marking as done confirms that your office has completed the required action.
+                    This will be logged in the transaction history.
                 </span>
             </div>
 
@@ -92,29 +72,13 @@ function handleClose() {
                 <span>{{ errorMsg }}</span>
             </div>
 
-            <!-- Reason (required) -->
-            <div>
-                <FrmLabel label="Reason" :isRequired="true" class="mb-1.5" />
-                <div class="grid grid-cols-1 gap-1.5">
-                    <label v-for="r in REASONS" :key="r"
-                        class="flex items-center gap-2.5 px-3 py-2 text-xs border rounded-lg cursor-pointer transition"
-                        :class="reason === r
-                            ? 'border-amber-500 bg-amber-50 text-amber-800 font-medium'
-                            : 'border-gray-200 hover:border-gray-300 text-gray-600'">
-                        <input type="radio" v-model="reason" :value="r" class="accent-amber-500" />
-                        {{ r }}
-                    </label>
-                </div>
-            </div>
-
-            <!-- Remarks (optional) -->
+            <!-- Remarks -->
             <div>
                 <div class="flex items-center gap-1 mb-1.5">
                     <FrmLabel label="Remarks" />
                     <span class="text-[10px] italic text-gray-400">(Optional)</span>
                 </div>
-                <Textarea v-model="remarks" placeholder="Add any additional notes for the originating office..."
-                    class="w-full" />
+                <Textarea v-model="remarks" placeholder="Describe what was accomplished..." class="w-full" />
             </div>
 
         </div>
@@ -125,17 +89,24 @@ function handleClose() {
                     textColorClass="text-gray-700" :disabled="loading">
                     Cancel
                 </BaseButton>
-                <BaseButton @click="handleReturn" backgroundClass="bg-red-600 hover:bg-red-700"
-                    textColorClass="text-white" :disabled="loading || !reason" class="min-w-[150px]">
+                <BaseButton @click="handleDone" backgroundClass="bg-green-600 hover:bg-green-700"
+                    textColorClass="text-white" :disabled="loading" class="min-w-[140px]">
                     <span v-if="loading" class="flex items-center gap-2">
                         <svg class="animate-spin size-4" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
                             <path class="opacity-75" fill="currentColor"
                                 d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                         </svg>
-                        Returning...
+                        Saving...
                     </span>
-                    <span v-else>Return to Sender</span>
+                    <span v-else class="flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                            stroke="currentColor" class="size-4">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                        </svg>
+                        Mark as Done
+                    </span>
                 </BaseButton>
             </div>
         </template>

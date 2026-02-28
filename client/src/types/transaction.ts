@@ -5,11 +5,13 @@ export interface Document {
     origin_type: string
     subject: string
     remarks?: string
-    status: 'Draft' | 'Processing' | 'Archived'
+    status: 'Draft' | 'Active' | 'Returned' | 'Completed' | 'Closed'
     office_id: string
     office_name: string
     created_by_id: string
     created_by_name: string
+    allow_copy: boolean
+    qr_code?: string | null
     isActive: boolean
     created_at: string
     updated_at: string
@@ -20,6 +22,7 @@ export interface DocumentRecipient {
     document_no: string
     transaction_no: string
     recipient_type: 'default' | 'cc' | 'bcc'
+    sequence?: number
     office_id: string
     office_name: string
     created_by_id: string
@@ -40,26 +43,14 @@ export interface DocumentSignatory {
     updated_at: string
 }
 
-// export interface DocumentAttachment {
-//     id: number
-//     document_no: string
-//     transaction_no: string
-//     file_name: string
-//     attachment_type: string
-//     office_id: string
-//     office_name: string
-//     created_at: string
-//     updated_at: string
-// }
-
 export interface DocumentAttachment {
     id: number
     document_no: string
     transaction_no: string
     file_name: string
-    file_path: string       // ← add
-    mime_type: string       // ← add
-    file_size: number       // ← add
+    file_path: string
+    mime_type: string
+    file_size: number
     attachment_type: 'main' | 'attachment'
     office_id: string
     office_name: string
@@ -78,7 +69,11 @@ export interface Transaction {
     origin_type: string
     subject: string
     remarks?: string
-    status: 'Draft' | 'Processing' | 'Archived'
+    status: 'Draft' | 'Processing' | 'Returned' | 'Completed'
+    routing: 'Single' | 'Multiple' | 'Sequential'
+    urgency_level: 'Urgent' | 'High' | 'Normal' | 'Routine'
+    due_date?: string | null
+    parent_transaction_no?: string | null
     office_id: string
     office_name: string
     created_by_id: string
@@ -101,12 +96,38 @@ export interface DocumentLog {
     transaction_no: string
     office_id: string
     office_name: string
-    status: 'Profiled' | 'Received' | 'Released' | 'Archived' | 'Returned To Sender' | 'Forwarded'
+    status:
+        | 'Profiled'
+        | 'Released'
+        | 'Received'
+        | 'Forwarded'
+        | 'Returned To Sender'
+        | 'Done'
+        | 'Closed'
+        | 'Routing Halted'
+        | 'Document Revised'
+        | 'Recipient Added'
+        | 'Recipient Removed'
+        | 'Recipients Reordered'
     action_taken: string
     activity: string
-    remarks?: string
+    reason?: string | null
+    remarks?: string | null
     assigned_personnel_id: string
     assigned_personnel_name: string
+    created_at: string
+    updated_at: string
+}
+
+export interface DocumentNote {
+    id: number
+    document_no: string
+    transaction_no: string
+    note: string
+    office_id: string
+    office_name: string
+    created_by_id: string
+    created_by_name: string
     created_at: string
     updated_at: string
 }

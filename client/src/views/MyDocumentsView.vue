@@ -21,10 +21,12 @@ const {
 
 // ── Tabs ───────────────────────────────────────────────────────────────────────
 const tabs = [
-    { tabLabel: "All", status: undefined },
-    { tabLabel: "Processing", status: "Processing" },
-    { tabLabel: "Draft", status: "Draft" },
-    { tabLabel: "Archived", status: "Archived" },
+    { tabLabel: "All",       status: undefined },
+    { tabLabel: "Active",    status: "Active" },
+    { tabLabel: "Draft",     status: "Draft" },
+    { tabLabel: "Returned",  status: "Returned" },
+    { tabLabel: "Completed", status: "Completed" },
+    { tabLabel: "Closed",    status: "Closed" },
 ];
 
 const activeTab = ref(tabs[0].tabLabel);
@@ -140,9 +142,11 @@ function formatDate(dateStr: string) {
 }
 
 const statusStyle: Record<string, string> = {
-    Draft: "bg-gray-100 text-gray-500",
-    Processing: "bg-blue-50 text-blue-600",
-    Archived: "bg-amber-50 text-amber-600",
+    Draft:     "bg-gray-100 text-gray-500",
+    Active:    "bg-blue-50 text-blue-600",
+    Returned:  "bg-amber-50 text-amber-700",
+    Completed: "bg-green-50 text-green-700",
+    Closed:    "bg-gray-100 text-gray-500",
 };
 
 const routingStyle: Record<string, string> = {
@@ -170,7 +174,7 @@ const transactionTypeStyle: Record<string, string> = {
                 <div class="relative flex pr-4">
                     <div v-for="(tab, index) in tabs" :key="tab.tabLabel"
                         :ref="el => { if (el) tabRefs[index] = el as HTMLElement }" @click="activeTab = tab.tabLabel"
-                        class="px-3 mb-2 w-[100px] py-2 text-xs text-center cursor-pointer"
+                        class="px-2 mb-2 w-[80px] py-2 text-xs text-center cursor-pointer"
                         :class="activeTab === tab.tabLabel ? 'text-teal-700 font-bold' : 'text-gray-500'">
                         {{ tab.tabLabel }}
                     </div>
@@ -360,9 +364,10 @@ const transactionTypeStyle: Record<string, string> = {
                                     class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full"
                                     :class="statusStyle[doc.status] ?? 'bg-gray-100 text-gray-500'">
                                     <span class="size-1.5 rounded-full inline-block" :class="{
-                                        'bg-gray-400': doc.status === 'Draft',
-                                        'bg-blue-500': doc.status === 'Processing',
-                                        'bg-amber-500': doc.status === 'Archived',
+                                        'bg-gray-400':  doc.status === 'Draft' || doc.status === 'Closed',
+                                        'bg-blue-500':  doc.status === 'Active',
+                                        'bg-amber-500': doc.status === 'Returned',
+                                        'bg-green-500': doc.status === 'Completed',
                                     }" />
                                     {{ doc.status }}
                                 </span>

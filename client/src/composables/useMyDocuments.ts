@@ -21,7 +21,7 @@ export interface MyDocumentTransaction {
     transaction_no: string
     transaction_type: 'Default' | 'Forward' | 'Reply'
     routing: 'Single' | 'Multiple' | 'Sequential'
-    status: 'Draft' | 'Processing' | 'Completed'
+    status: 'Draft' | 'Processing' | 'Returned' | 'Completed'
     created_at: string
 }
 
@@ -32,7 +32,7 @@ export interface MyDocument {
     origin_type: string
     subject: string
     remarks: string | null
-    status: 'Draft' | 'Processing' | 'Archived'
+    status: 'Draft' | 'Active' | 'Returned' | 'Completed' | 'Closed'
     office_id: string
     office_name: string
     created_by_id: string
