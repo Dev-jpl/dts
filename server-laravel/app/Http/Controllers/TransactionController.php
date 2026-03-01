@@ -271,7 +271,7 @@ class TransactionController extends Controller
             $transaction->document->update(['status' => 'Active']);
         });
 
-        NotificationService::onInitialRelease($transaction->refresh()->load('recipients'));
+        NotificationService::onRelease($transaction->refresh()->load('recipients'));
 
         return response()->json([
             'success' => true,
@@ -425,8 +425,9 @@ class TransactionController extends Controller
             }
         }
 
-        DB::transaction(function () use ($trxNo, $transaction, $validated, $user, $recipient) {
-            DocumentTransactionLog::create([
+        $receivedLog = null;
+        DB::transaction(function () use ($trxNo, $transaction, $validated, $user, $recipient, &$receivedLog) {
+            $receivedLog = DocumentTransactionLog::create([
                 'transaction_no'          => $trxNo,
                 'document_no'             => $transaction->document_no,
                 'status'                  => 'Received',
@@ -444,7 +445,7 @@ class TransactionController extends Controller
             TransactionStatusService::evaluate($trxNo);
         });
 
-        NotificationService::onReceive($transaction, $user->office_id, $user->office_name, $recipient->recipient_type);
+        NotificationService::onReceive($receivedLog);
 
         return response()->json([
             'success' => true,
@@ -590,8 +591,9 @@ class TransactionController extends Controller
 
         $routedOffice = $validated['routed_office'];
 
-        DB::transaction(function () use ($trxNo, $transaction, $validated, $user, $routedOffice) {
-            DocumentTransactionLog::create([
+        $forwardLog = null;
+        DB::transaction(function () use ($trxNo, $transaction, $validated, $user, $routedOffice, &$forwardLog) {
+            $forwardLog = DocumentTransactionLog::create([
                 'transaction_no'          => $trxNo,
                 'document_no'             => $transaction->document_no,
                 'status'                  => 'Forwarded',
@@ -632,7 +634,9 @@ class TransactionController extends Controller
             TransactionStatusService::evaluate($trxNo);
         });
 
-        NotificationService::onForward($transaction, $routedOffice['id'], $routedOffice['office_name']);
+        NotificationService::onForward($forwardLog, [
+            ['office_id' => $routedOffice['id'], 'office_name' => $routedOffice['office_name']],
+        ]);
 
         return response()->json([
             'success' => true,
@@ -692,9 +696,10 @@ class TransactionController extends Controller
             ->where('isActive', true)
             ->where('office_id', '!=', $user->office_id);
 
-        DB::transaction(function () use ($trxNo, $transaction, $validated, $user, $pendingRecipients) {
+        $returnLog = null;
+        DB::transaction(function () use ($trxNo, $transaction, $validated, $user, $pendingRecipients, &$returnLog) {
             // 1. Create Returned To Sender log
-            DocumentTransactionLog::create([
+            $returnLog = DocumentTransactionLog::create([
                 'transaction_no'          => $trxNo,
                 'document_no'             => $transaction->document_no,
                 'status'                  => 'Returned To Sender',
@@ -746,12 +751,8 @@ class TransactionController extends Controller
         });
 
         NotificationService::onReturnToSender(
-            $transaction,
-            $user->office_id,
-            $user->office_name,
-            $validated['reason'],
-            $validated['remarks'] ?? null,
-            $pendingRecipients
+            $returnLog,
+            $pendingRecipients->map(fn($r) => ['office_id' => $r->office_id, 'office_name' => $r->office_name])->values()->all()
         );
 
         return response()->json([

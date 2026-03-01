@@ -400,7 +400,7 @@ class DocumentController extends Controller
         $newTrx = DocumentTransaction::with(['document', 'recipients', 'signatories', 'attachments', 'logs'])
             ->where('transaction_no', $newTrxNo)->first();
 
-        NotificationService::onInitialRelease($newTrx);
+        NotificationService::onRelease($newTrx);
 
         return response()->json([
             'success' => true,
@@ -614,7 +614,7 @@ class DocumentController extends Controller
             'created_by_name' => $user->fullName(),
         ]);
 
-        NotificationService::onOfficialNoteAdded($document, $note);
+        NotificationService::onOfficialNoteAdded($document->document_no);
 
         return response()->json(['success' => true, 'data' => $note], 201);
     }

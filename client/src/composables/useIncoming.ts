@@ -5,7 +5,7 @@ import API from '@/api'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type IncomingTab = 'all' | 'for_action' | 'actioned' | 'overdue'
+export type IncomingTab = 'all' | 'for_action' | 'overdue' | 'in_progress' | 'completed' | 'closed'
 export type SortDir = 'asc' | 'desc'
 export type SortBy = 'created_at' | 'office_name'
 export type PerPage = 15 | 30 | 50
@@ -36,7 +36,7 @@ export interface IncomingDocument {
     office_name: string
     routed_office_id: string | null
     routed_office_name: string | null
-    status: 'Profiled' | 'Received' | 'Released' | 'Archived' | 'Returned To Sender' | 'Forwarded'
+    status: 'Profiled' | 'Released' | 'Received' | 'Forwarded' | 'Returned To Sender' | 'Done' | 'Closed' | 'Routing Halted'
     action_taken: string | null
     activity: string
     remarks: string | null
@@ -80,55 +80,62 @@ export interface Pagination {
 export interface TabCounts {
     all: number
     for_action: number
-    actioned: number
     overdue: number
+    in_progress: number
+    completed: number
+    closed: number
 }
 
 // ─── Tab Config ───────────────────────────────────────────────────────────────
 
 export const INCOMING_TABS: { key: IncomingTab; label: string; endpoint: string }[] = [
-    { key: 'for_action', label: 'For Action', endpoint: '/incoming/for-action' },
-    { key: 'actioned', label: 'Actioned', endpoint: '/incoming/actioned' },
-    { key: 'overdue', label: 'Overdue', endpoint: '/incoming/overdue' },
-    { key: 'all', label: 'All Incoming', endpoint: '/incoming' },
+    { key: 'all',         label: 'All',         endpoint: '/incoming' },
+    { key: 'for_action',  label: 'For Action',  endpoint: '/incoming/for-action' },
+    { key: 'overdue',     label: 'Overdue',     endpoint: '/incoming/overdue' },
+    { key: 'in_progress', label: 'In Progress', endpoint: '/incoming/in-progress' },
+    { key: 'completed',   label: 'Completed',   endpoint: '/incoming/completed' },
+    { key: 'closed',      label: 'Closed',      endpoint: '/incoming/closed' },
 ]
 
 // ─── Status chip helper (exported so view can use it too) ─────────────────────
 
 export type DerivedStatus =
     | 'Awaiting Receipt'
-    | 'For Processing'
+    | 'In Progress'
     | 'Returned To You'
     | 'Forwarded'
     | 'Returned To Sender'
-    | 'Archived'
+    | 'Done'
+    | 'Closed'
 
 export function deriveStatus(doc: IncomingDocument, currentOfficeId: string): DerivedStatus {
     const status = doc.status
 
-    // Released TO this office but never received yet
+    // Released TO this office but not yet received
     if (status === 'Released' && doc.routed_office_id === currentOfficeId) {
         return 'Awaiting Receipt'
     }
-    // Released to someone else but came back here
+    // Released to someone else (re-routed back to origin)
     if (status === 'Released' && doc.office_id !== currentOfficeId) {
         return 'Returned To You'
     }
-    if (status === 'Received') return 'For Processing'
+    if (status === 'Received') return 'In Progress'
     if (status === 'Forwarded') return 'Forwarded'
     if (status === 'Returned To Sender') return 'Returned To Sender'
-    if (status === 'Archived') return 'Archived'
+    if (status === 'Done') return 'Done'
+    if (status === 'Closed') return 'Closed'
 
     return 'Awaiting Receipt'
 }
 
 export const STATUS_CHIP: Record<DerivedStatus, { label: string; classes: string }> = {
-    'Awaiting Receipt': { label: 'Awaiting Receipt', classes: 'bg-blue-100 text-blue-700' },
-    'For Processing': { label: 'For Processing', classes: 'bg-amber-100 text-amber-700' },
-    'Returned To You': { label: 'Returned To You', classes: 'bg-orange-100 text-orange-700' },
-    'Forwarded': { label: 'Forwarded', classes: 'bg-purple-100 text-purple-700' },
+    'Awaiting Receipt':   { label: 'Awaiting Receipt',   classes: 'bg-blue-100 text-blue-700' },
+    'In Progress':        { label: 'In Progress',        classes: 'bg-amber-100 text-amber-700' },
+    'Returned To You':    { label: 'Returned To You',    classes: 'bg-orange-100 text-orange-700' },
+    'Forwarded':          { label: 'Forwarded',          classes: 'bg-purple-100 text-purple-700' },
     'Returned To Sender': { label: 'Returned to Sender', classes: 'bg-red-100 text-red-700' },
-    'Archived': { label: 'Archived', classes: 'bg-gray-100 text-gray-500' },
+    'Done':               { label: 'Done',               classes: 'bg-green-100 text-green-700' },
+    'Closed':             { label: 'Closed',             classes: 'bg-gray-100 text-gray-500' },
 }
 
 export const ROUTING_CHIP: Record<string, string> = {
@@ -156,12 +163,12 @@ function defaultFilters(): IncomingFilters {
 // ─── Composable ───────────────────────────────────────────────────────────────
 
 export function useIncoming() {
-    const activeTab = ref<IncomingTab>('for_action')
+    const activeTab = ref<IncomingTab>('all')
     const documents = ref<IncomingDocument[]>([])
     const isLoading = ref(false)
     const error = ref<string | null>(null)
     const pagination = ref<Pagination | null>(null)
-    const counts = ref<TabCounts>({ all: 0, for_action: 0, actioned: 0, overdue: 0 })
+    const counts = ref<TabCounts>({ all: 0, for_action: 0, overdue: 0, in_progress: 0, completed: 0, closed: 0 })
     const countsLoading = ref(false)
     const filters = ref<IncomingFilters>(defaultFilters())
     const filterOptions = ref<FilterOptions>({ document_types: [], routing_types: [], sender_offices: [] })

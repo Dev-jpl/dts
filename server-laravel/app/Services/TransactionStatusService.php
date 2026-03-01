@@ -3,8 +3,8 @@
 namespace App\Services;
 
 use App\Models\ActionLibrary;
-use App\Models\Document;
 use App\Models\DocumentTransaction;
+use App\Services\DocumentStatusService;
 
 /**
  * TransactionStatusService
@@ -74,11 +74,10 @@ class TransactionStatusService
 
         if ($transaction->status !== $newStatus) {
             $transaction->update(['status' => $newStatus]);
-
-            if ($newStatus === 'Completed') {
-                self::evaluateDocumentStatus($transaction->document_no);
-            }
         }
+
+        // Always re-evaluate document status after transaction status is settled.
+        DocumentStatusService::evaluate($transaction->document_no);
 
         return $newStatus;
     }
@@ -87,38 +86,11 @@ class TransactionStatusService
      * Recompute and persist the document status from all its transactions.
      * Call directly from the controller after a Return to Sender or Force Close.
      *
-     * Document status transitions:
-     *   Any transaction Returned  → Document = Returned
-     *   All transactions Completed → Document = Completed
-     *   Otherwise                  → Document = Active
-     *
-     * Does NOT modify Closed documents.
+     * Delegates to DocumentStatusService — kept for backward compatibility.
      */
     public static function evaluateDocumentStatus(string $documentNo): void
     {
-        $document = Document::where('document_no', $documentNo)
-            ->lockForUpdate()
-            ->first();
-
-        if (!$document || $document->status === 'Closed') {
-            return;
-        }
-
-        $transactions = DocumentTransaction::where('document_no', $documentNo)->get();
-
-        if ($transactions->isEmpty()) {
-            return;
-        }
-
-        $allCompleted = $transactions->every(fn($t) => $t->status === 'Completed');
-        $anyReturned  = $transactions->contains(fn($t) => $t->status === 'Returned');
-
-        if ($allCompleted) {
-            $document->update(['status' => 'Completed']);
-        } elseif ($anyReturned) {
-            $document->update(['status' => 'Returned']);
-        }
-        // Active stays Active while any transaction is Processing
+        DocumentStatusService::evaluate($documentNo);
     }
 
     // ─────────────────────────────────────────────────────────────────────────

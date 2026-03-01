@@ -1,57 +1,7 @@
-# CLAUDE.md
-
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
 # DTS — Document Tracking System
-
----
-
-## Development Commands
-
-### Run everything (recommended for development)
-```bash
-# From server-laravel/ — starts Laravel server, queue listener, Pail log viewer, and Vite dev server concurrently
-cd server-laravel && composer run dev
-```
-
-### Individual processes
-```bash
-# Backend API server only
-cd server-laravel && php artisan serve
-
-# Frontend dev server only (Vite)
-cd client && npm run dev
-
-# Queue worker
-cd server-laravel && php artisan queue:listen --tries=1 --timeout=0
-```
-
-### Build
-```bash
-# Frontend production build (includes TypeScript check)
-cd client && npm run build
-
-# TypeScript check only
-cd client && npm run type-check
-```
-
-### Tests & Linting
-```bash
-# Run all backend tests (Pest)
-cd server-laravel && composer run test
-
-# Run a single test file or filter
-cd server-laravel && php artisan test --filter=TestClassName
-
-# PHP code style (Laravel Pint)
-cd server-laravel && ./vendor/bin/pint
-```
-
-### Database
-```bash
-cd server-laravel && php artisan migrate
-cd server-laravel && php artisan db:seed
-```
+# Claude Code Master Context File
+# Read this fully before every task.
+# Last updated: Chapter 1 + Chapter 2 complete
 
 ---
 
@@ -62,25 +12,37 @@ cd server-laravel && php artisan db:seed
 ├── server-laravel/          ← Laravel 12 REST API (PHP 8.2+)
 │   ├── app/
 │   │   ├── Http/
-│   │   │   ├── Controllers/     ← All controllers here
-│   │   │   └── Requests/        ← Form request validators
-│   │   ├── Models/              ← Eloquent models
-│   │   ├── Services/            ← Business logic (TransactionStatusService etc.)
-│   │   └── Events/              ← DocumentActivityLoggedEvent etc.
+│   │   │   ├── Controllers/          ← All controllers here
+│   │   │   │   └── Settings/         ← Settings sub-controllers
+│   │   │   └── Requests/             ← Form request validators
+│   │   ├── Models/                   ← Eloquent models
+│   │   ├── Services/                 ← Business logic
+│   │   ├── Reports/                  ← Report classes (Chapter 2)
+│   │   ├── Notifications/            ← Laravel notification classes
+│   │   └── Events/                   ← DocumentActivityLoggedEvent etc.
 │   ├── database/
-│   │   ├── migrations/          ← Never modify existing, always add new
+│   │   ├── migrations/               ← Never modify existing, always add new
 │   │   └── seeders/
 │   └── routes/
-│       └── api.php              ← All API routes
+│       └── api.php                   ← All API routes
 └── client/                  ← Vue 3 + TypeScript SPA
     └── src/
-        ├── views/               ← Page-level components
-        ├── components/          ← Reusable UI components
-        ├── composables/         ← useTransaction.ts, useActionVisibility.ts etc.
-        ├── stores/              ← Pinia stores (auth, document, libraries)
-        ├── services/            ← API service functions
-        ├── router/              ← Vue Router (index.ts)
-        └── api/                 ← Axios instance + interceptors
+        ├── views/                    ← Page-level components
+        │   ├── reports/              ← Report views
+        │   ├── settings/             ← Settings views
+        │   └── templates/            ← Template views
+        ├── components/               ← Reusable UI components
+        │   ├── dashboard/            ← Dashboard widgets
+        │   ├── reports/              ← Report components
+        │   ├── search/               ← Search components
+        │   ├── templates/            ← Template components
+        │   ├── notifications/        ← Notification components
+        │   └── signatories/          ← Signatory components
+        ├── composables/              ← All composables
+        ├── stores/                   ← Pinia stores
+        ├── services/                 ← API service functions
+        ├── router/                   ← Vue Router (index.ts)
+        └── api/                      ← Axios instance + interceptors
 ```
 
 ---
@@ -89,21 +51,52 @@ cd server-laravel && php artisan db:seed
 
 ### Backend
 - Laravel 12, PHP 8.2+
-- Laravel Passport (OAuth2 — `auth:api` guard on all protected routes)
-- PostgreSQL
+- Laravel Passport (OAuth2 — `auth:api` guard on ALL protected routes)
+- PostgreSQL 15+
 - Laravel Queue (jobs for async processing)
-- Events: `DocumentActivityLoggedEvent`
+- barryvdh/laravel-dompdf (PDF export)
+- maatwebsite/excel (Excel export)
+- simplesoftwareio/simple-qrcode (QR code generation)
 
 ### Frontend
 - Vue 3 + TypeScript + Vite
-- Pinia (stores: auth, document, libraries)
+- Pinia (stores: auth, document, libraries, dashboard, reports, search, notifications)
 - Vue Router 4
 - Tailwind CSS v4
 - Axios (configured in `client/src/api/index.ts`)
+- chart.js + vue-chartjs (reports charts)
+- date-fns (date utilities)
+- laravel-echo + pusher-js (WebSocket)
 
 ---
 
-## Current API Routes
+## Implementation Status
+
+### Chapter 1 — Transaction Flow
+```
+Phase 1 — DB Updates                ⬜ Pending
+Phase 2 — Core Services             ⬜ Pending
+Phase 3 — Backend Actions           ⬜ Pending
+Phase 4 — Frontend                  ⬜ Pending
+```
+
+### Chapter 2 — Extended Modules
+```
+Module 1 — Dashboard                ⬜ Pending
+Module 2 — Reports                  ⬜ Pending
+Module 3 — Advanced Search          ⬜ Pending
+Module 4 — Templating               ⬜ Pending
+Module 5 — Notifications Center     ⬜ Pending
+Module 6 — User & Office Settings   ⬜ Pending
+Module 7 — Signatory Management     ⬜ Pending
+```
+
+> Update this section after completing each task.
+> Mark done as: ✅ Done | 🔄 In Progress | ⬜ Pending
+
+---
+
+## Current API Routes (existing)
 
 ```
 POST   /api/login
@@ -117,8 +110,8 @@ GET    /api/transactions/{trxNo}/history
 POST   /api/transactions/{trxNo}/log_transaction
 POST   /api/transactions/{trxNo}/release
 POST   /api/transactions/{trxNo}/upload/commit
-GET    /api/transactions/{trxNo}/comments        ← to be replaced by notes
-POST   /api/transactions/{trxNo}/comments        ← to be replaced by notes
+GET    /api/transactions/{trxNo}/comments        ← deprecate → replaced by notes
+POST   /api/transactions/{trxNo}/comments        ← deprecate → replaced by notes
 POST   /api/transactions/{trxNo}/receive
 POST   /api/transactions/{trxNo}/forward
 
@@ -137,11 +130,14 @@ GET    /api/incoming/counts
 GET    /api/incoming/filters
 ```
 
-### Routes to Add
+---
+
+## Routes to Add — Chapter 1
+
 ```
 POST   /api/transactions/{trxNo}/subsequent-release
 POST   /api/transactions/{trxNo}/done
-POST   /api/transactions/{trxNo}/return             ← update existing
+POST   /api/transactions/{trxNo}/return              ← update existing
 POST   /api/transactions/{trxNo}/reply
 PATCH  /api/transactions/{trxNo}/recipients
 POST   /api/documents/{docNo}/close
@@ -150,6 +146,90 @@ PUT    /api/documents/{docNo}/re-release
 POST   /api/documents/{docNo}/copy
 GET    /api/documents/{docNo}/notes
 POST   /api/documents/{docNo}/notes
+```
+
+---
+
+## Routes to Add — Chapter 2
+
+```
+# Dashboard
+GET    /api/dashboard
+GET    /api/dashboard/for-action
+GET    /api/dashboard/overdue
+GET    /api/dashboard/outgoing
+GET    /api/dashboard/drafts
+GET    /api/dashboard/stats
+GET    /api/dashboard/activity
+GET    /api/dashboard/team              ← Superior role only
+GET    /api/dashboard/system            ← Admin role only
+
+# Reports
+GET    /api/reports/office-performance
+GET    /api/reports/pipeline
+GET    /api/reports/compliance
+GET    /api/reports/audit/{docNo}
+GET    /api/reports/turnaround
+GET    /api/reports/office-performance/export
+GET    /api/reports/pipeline/export
+GET    /api/reports/compliance/export
+GET    /api/reports/audit/{docNo}/export    ← PDF only, never Excel
+GET    /api/reports/turnaround/export
+
+# Search
+GET    /api/search
+GET    /api/search/quick
+GET    /api/search/saved
+POST   /api/search/saved
+DELETE /api/search/saved/{id}
+GET    /api/search/filters
+
+# Templates
+GET    /api/templates
+GET    /api/templates/personal
+GET    /api/templates/office
+GET    /api/templates/system
+POST   /api/templates
+GET    /api/templates/{id}
+PUT    /api/templates/{id}
+DELETE /api/templates/{id}
+POST   /api/templates/{id}/duplicate
+POST   /api/templates/{id}/use
+POST   /api/documents/{docNo}/save-as-template
+
+# Notifications
+GET    /api/notifications
+GET    /api/notifications/unread-count
+PATCH  /api/notifications/{id}/read
+PATCH  /api/notifications/read-all
+DELETE /api/notifications/{id}
+GET    /api/notifications/preferences
+PUT    /api/notifications/preferences
+
+# Settings
+GET    /api/settings/profile
+PUT    /api/settings/profile
+PUT    /api/settings/password
+GET    /api/settings/preferences
+PUT    /api/settings/preferences
+GET    /api/settings/sessions
+DELETE /api/settings/sessions/{id}
+GET    /api/settings/office
+PUT    /api/settings/office
+GET    /api/settings/office/members
+GET    /api/settings/office/defaults
+PUT    /api/settings/office/defaults
+
+# Signatories
+GET    /api/signatories/library
+POST   /api/signatories/library
+PUT    /api/signatories/library/{id}
+DELETE /api/signatories/library/{id}
+GET    /api/documents/{docNo}/signatories
+POST   /api/documents/{docNo}/signatories
+PUT    /api/documents/{docNo}/signatories/{id}
+DELETE /api/documents/{docNo}/signatories/{id}
+PATCH  /api/documents/{docNo}/signatories/reorder
 ```
 
 ---
@@ -203,13 +283,30 @@ ADD fields:
   default_urgency_level  enum: Urgent|High|Normal|Routine nullable
 ```
 
-### CREATE these tables (do not exist yet)
+### document_signatories
+```
+ADD fields (if not present):
+  position   varchar(150) nullable
+  office     varchar(150) nullable
+  role       enum: Noted|Approved|Signed|Certified default Signed
+  sequence   integer default 1
+```
+
+### CREATE — Chapter 1
 ```
 document_versions
 document_notes          ← replaces document_comments
-user_saved_searches     ← Chapter 2
-document_templates      ← Chapter 2
-document_template_recipients ← Chapter 2
+```
+
+### CREATE — Chapter 2
+```
+user_saved_searches
+document_templates
+document_template_recipients
+notifications                     ← php artisan notifications:table
+user_notification_preferences
+user_preferences
+signatory_library
 ```
 
 ### DEPRECATE (keep rows, stop inserting)
@@ -220,7 +317,123 @@ document_logs      ← replaced by document_transaction_logs
 
 ---
 
-## Status Enums — FINAL REFERENCE
+## Full Schema Reference — New Tables
+
+### document_versions
+```sql
+id                   bigint PK auto-increment
+document_no          varchar FK → documents
+transaction_no       varchar FK → document_transactions
+version_number       int
+subject              varchar(255)
+action_type          varchar(50)
+document_type        varchar(50)
+origin_type          varchar(50)
+remarks              varchar(255) nullable
+recipients_snapshot  json
+changed_by_id        uuid FK → users
+changed_by_name      varchar(150)
+changed_at           timestamp
+```
+
+### document_notes
+```sql
+id               bigint PK auto-increment
+document_no      varchar FK → documents
+transaction_no   varchar FK → document_transactions
+note             text NOT NULL
+office_id        varchar FK → office_libraries
+office_name      varchar(150)
+created_by_id    uuid FK → users
+created_by_name  varchar(150)
+created_at       timestamp
+updated_at       timestamp
+```
+
+### user_saved_searches
+```sql
+id           bigint PK auto-increment
+user_id      uuid FK → users ON DELETE CASCADE
+name         varchar(100)
+filters_json json
+sort_by      varchar(50) default 'relevance'
+created_at   timestamp
+updated_at   timestamp
+```
+
+### document_templates
+```sql
+id                bigint PK auto-increment
+name              varchar(150)
+description       text nullable
+scope             enum: personal|office|system
+document_type     varchar(100) nullable
+action_type       varchar(100) nullable
+routing_type      enum: Single|Multiple|Sequential nullable
+urgency_level     enum: Urgent|High|Normal|Routine default High
+origin_type       varchar(100) nullable
+remarks_template  text nullable
+created_by_id     uuid FK → users
+created_by_name   varchar(150)
+office_id         varchar FK → office_libraries
+isActive          boolean default true
+use_count         integer default 0
+last_used_at      timestamp nullable
+created_at        timestamp
+updated_at        timestamp
+```
+
+### document_template_recipients
+```sql
+id              bigint PK auto-increment
+template_id     bigint FK → document_templates ON DELETE CASCADE
+office_id       varchar
+office_name     varchar(150)
+recipient_type  enum: default|cc|bcc default default
+sequence        integer default 1
+created_at      timestamp
+updated_at      timestamp
+```
+
+### user_notification_preferences
+```sql
+id          bigint PK auto-increment
+user_id     uuid FK → users ON DELETE CASCADE
+event_type  varchar(100)
+in_app      boolean default true
+email       boolean default false
+created_at  timestamp
+updated_at  timestamp
+UNIQUE(user_id, event_type)
+```
+
+### user_preferences
+```sql
+id                  bigint PK auto-increment
+user_id             uuid UNIQUE FK → users ON DELETE CASCADE
+date_format         varchar(20) default 'Y-m-d'
+timezone            varchar(50) default 'Asia/Manila'
+default_period      enum: week|month|quarter|year default month
+dashboard_realtime  boolean default true
+created_at          timestamp
+updated_at          timestamp
+```
+
+### signatory_library
+```sql
+id           bigint PK auto-increment
+name         varchar(150)
+position     varchar(150) nullable
+office_id    varchar FK → office_libraries
+office_name  varchar(150)
+isActive     boolean default true
+created_at   timestamp
+updated_at   timestamp
+```
+
+---
+
+## Status Enums — Final Reference
 
 ```
 documents.status:
@@ -237,16 +450,16 @@ document_transaction_logs.status:
 
 ---
 
-## Action Types — FA vs FI Classification
+## Action Types — FA vs FI
 
 ```
-FA (For Action) — recipient must take terminal action:
+FA (For Action) — must take terminal action beyond Receive:
   Appropriate Action, Urgent Action, Comment/Reaction/Response,
   Compliance/Implementation, Endorsement/Recommendation,
   Coding/Deposit/Preparation, Follow Up, Investigation/Verification,
   Draft of Reply, Approval
 
-FI (For Information) — Receive is the terminal action:
+FI (For Information) — Receive IS the terminal action:
   Dissemination of Information, Your Information
 ```
 
@@ -254,7 +467,7 @@ FI (For Information) — Receive is the terminal action:
 | Action | type | reply_is_terminal | requires_proof | default_urgency |
 |--------|------|-------------------|----------------|-----------------|
 | Appropriate Action | FA | false | true | null |
-| Urgent Action | FA | false | true | Urgent locked |
+| Urgent Action | FA | false | true | Urgent (locked) |
 | Dissemination of Information | FI | false | false | null |
 | Comment/Reaction/Response | FA | true | false | null |
 | Compliance/Implementation | FA | false | true | null |
@@ -276,14 +489,15 @@ High    → 3 days  (system default)
 Normal  → 5 days
 Routine → 7 days
 
-Overdue clock starts: on Receive log timestamp (NOT on Release)
-Applies to: FA recipients only (never FI, never CC/BCC)
+Overdue clock starts: on Receive log timestamp — NOT on Release
+Applies to: FA default recipients ONLY
+Never applies to: FI, CC, BCC
 
-Priority order:
-  1. due_date set explicitly → use that date
+Priority order for due date calculation:
+  1. due_date set explicitly on transaction → use that
   2. urgency_level on transaction → received_at + threshold
   3. document_type.default_urgency_level → received_at + period
-  4. System default → High (3 days)
+  4. System default → High (3 days) from received_at
 ```
 
 ---
@@ -293,7 +507,7 @@ Priority order:
 ### isActive Lifecycle
 ```
 Created on release                    → true
-Receives                              → stays true
+Receives                              → stays true (no change)
 Subsequent Release — releasing party  → false
 Subsequent Release — target           → true (reactivated)
 Forward — forwarder                   → false
@@ -301,31 +515,32 @@ Mark as Done                          → false
 Reply (reply_is_terminal=true)        → false
 Reply (reply_is_terminal=false)       → stays true
 Manage Recipients — removed           → false (SOFT ONLY — NEVER hard delete)
-Return to Sender — all pending        → false
-Force Close — all pending             → false
+Return to Sender — ALL pending        → false
+Force Close — ALL pending             → false
 Sequential FA — after terminal action → false
-Sequential FI — after Receive         → false (auto-advances)
+Sequential FI — after Receive         → false (auto-advances to next)
 ```
 
 ### CC/BCC Permissions
 ```
-                         Default  CC    BCC
-Can Receive              ✅       ✅    ✅
-Can Reply                ✅       ✅    ✅
-Can Add Official Note    ✅       ✅    ✅
-Can Forward              ✅       ❌    ❌
-Can Return to Sender     ✅       ❌    ❌
-Can Mark as Done         ✅       ❌    ❌
-Can Subsequent Release   ✅       ❌    ❌
-Counts toward Completion ✅       ❌    ❌
-In Sequential order      ✅       ❌    ❌
-Visible to others        ✅       ✅    ❌ hidden
-Receive notifies origin  ✅       ❌    ❌
+                           Default  CC     BCC
+Can Receive                ✅       ✅     ✅
+Can Reply                  ✅       ✅     ✅
+Can Add Official Note      ✅       ✅     ✅
+Can Forward                ✅       ❌     ❌
+Can Return to Sender       ✅       ❌     ❌
+Can Mark as Done           ✅       ❌     ❌
+Can Subsequent Release     ✅       ❌     ❌
+Counts toward Completion   ✅       ❌     ❌
+Part of Sequential order   ✅       ❌     ❌
+Visible to other recipients✅       ✅     ❌ hidden
+Receive notifies origin    ✅       ❌     ❌
+Notes visible to all       ✅       ✅     ✅
 ```
 
 ---
 
-## TransactionStatusService — Rules
+## TransactionStatusService
 
 ### NEVER manually set status = Completed
 ### ALWAYS call TransactionStatusService::evaluate($transactionNo)
@@ -335,19 +550,19 @@ FI Transaction:
   Completed when ALL default isActive=true recipients have Received log
 
 FA Transaction:
-  Completed when ALL default isActive=true recipients have terminal action log
-  Terminal actions: Done | Forwarded | Returned To Sender | Released (subsequent)
-                    | Reply log (if reply_is_terminal=true)
+  Completed when ALL default isActive=true recipients have a terminal action log
+  Terminal: Done | Forwarded | Returned To Sender | Released (subsequent)
+            | Reply log (if reply_is_terminal=true)
   Receive alone does NOT complete an FA transaction
 
 Document Completed:
-  Only when ALL document_transactions linked to document_no are Completed
-  Document stays Active if ANY transaction is Processing
+  Only when ALL document_transactions for document_no are Completed
+  Document stays Active if ANY transaction is still Processing
 
-Reply transactions → new document_no → independent, do NOT affect original
+Reply → new document_no → independent — does NOT affect original document
 ```
 
-### Routing Completion Rules
+### Routing Completion
 ```
 Single:
   FA → Completed on first terminal action
@@ -356,13 +571,13 @@ Single:
 Multiple:
   FA → Completed when ALL default recipients have terminal actions
   FI → Completed when ALL default recipients have Received
-  Any Return → ALL pending isActive→false, Transaction→Returned, Document→Returned
+  Any Return → ALL pending isActive=false, Transaction+Document → Returned
 
 Sequential:
-  FA → each step terminal action → next activates → last step terminal → Completed
-  FI → each step Receives → next activates → last step Receives → Completed
-  Any Return → sequence halts, all pending isActive→false, Transaction+Document→Returned
-  Guard: only lowest-sequence office with no terminal action can act
+  FA → each step terminal action → next activates → last step → Completed
+  FI → each step Receives → next activates → last Receives → Completed
+  Any Return → sequence halts, ALL pending isActive=false, → Returned
+  Guard: ONLY lowest-sequence office with no terminal action can act
 ```
 
 ---
@@ -382,19 +597,23 @@ if ($transaction->status !== 'Processing') {
     return response()->json(['success' => false, 'message' => 'Transaction is not active.'], 422);
 }
 
-// 3. Actor check — is this user's office a valid actor?
-// (varies per action — check isActive=true on recipient row)
+// 3. Actor check — isActive=true recipient row for this office
+$recipient = DocumentRecipient::where('transaction_no', $trxNo)
+    ->where('office_id', $user->office_id)
+    ->where('isActive', true)->first();
+if (!$recipient) {
+    return response()->json(['success' => false, 'message' => 'Not authorized.'], 403);
+}
 
-// 4. Duplicate action check — no duplicate log
-// (varies per action — check logs for existing entry)
-
+// 4. Duplicate action check
 // 5. Sequential turn check (if applicable)
-// Only for sequential routing — verify this is the active step
-
-// 6. Additional guards (e.g. proof attachment for Mark as Done)
+// 6. Additional guards (proof attachment, etc.)
 
 // 7. Execute inside DB::transaction()
-DB::transaction(function() use (...) { ... });
+DB::transaction(function() use (...) {
+    // ... logic
+    TransactionStatusService::evaluate($transaction->transaction_no);
+});
 ```
 
 ---
@@ -411,59 +630,46 @@ return response()->json([
     ])
 ], 200);
 
-// Validation error
-return response()->json([
-    'success' => false,
-    'message' => 'Human readable error message.',
-], 422);
-
-// Not found
-return response()->json([
-    'success' => false,
-    'message' => 'Resource not found.',
-], 404);
-
-// Conflict (duplicate action)
-return response()->json([
-    'success' => false,
-    'message' => 'Action already performed.',
-], 409);
+// Validation error  → 422
+// Not found         → 404
+// Not authorized    → 403
+// Already actioned  → 409
 ```
 
 ---
 
 ## All Actions — Quick Reference
 
-| Action | Route | Key Guard | Creates New TRX |
-|--------|-------|-----------|-----------------|
+| Action | Route | Key Guard | New TRX |
+|--------|-------|-----------|---------|
 | Initial Release | POST /{trxNo}/release | status=Draft, origin only | No |
-| Subsequent Release | POST /{trxNo}/subsequent-release | isActive=true, has Received, target is registered | No |
-| Receive | POST /{trxNo}/receive | isActive=true, no dup Received, seq turn | No |
+| Subsequent Release | POST /{trxNo}/subsequent-release | isActive=true, Received, target registered | No |
+| Receive | POST /{trxNo}/receive | isActive=true, no dup, seq turn | No |
 | Mark as Done | POST /{trxNo}/done | FA+default only, proof if required | No |
-| Forward | POST /{trxNo}/forward | isActive=true, target NOT registered, default only | Yes (Forward) |
-| Return to Sender | POST /{trxNo}/return | isActive=true, has Received, default only, reason required | No |
-| Reply | POST /{trxNo}/reply | isActive=true, has Received, any type | Yes (Reply) + new doc |
+| Forward | POST /{trxNo}/forward | isActive=true, Received, target NOT registered | Yes (Forward) |
+| Return to Sender | POST /{trxNo}/return | isActive=true, Received, default, reason+remarks | No |
+| Reply | POST /{trxNo}/reply | isActive=true, Received, any type | Yes + new doc |
 | Close Single | POST /documents/{docNo}/close | origin only, remarks required | No |
-| Close Bulk | POST /documents/close-bulk | origin only, Completed docs only | No |
+| Close Bulk | POST /documents/close-bulk | origin, Completed docs only | No |
 | Edit & Re-release | PUT /documents/{docNo}/re-release | origin, doc=Returned | Yes (Default) |
 | Copy to New | POST /documents/{docNo}/copy | origin only | Yes + new doc |
 | Manage Recipients | PATCH /{trxNo}/recipients | origin, Processing, atomic | No |
-| Official Notes | POST /documents/{docNo}/notes | active participant, doc not Closed | No |
+| Official Notes | POST /documents/{docNo}/notes | active participant, not Closed | No |
 
 ---
 
 ## Notification Triggers
 
 ```
-Initial Release        → All recipients including CC/BCC
+Initial Release        → All recipients (including CC/BCC)
 Subsequent Release     → Target office only
 Receive (default)      → Origin office
 Receive (CC/BCC)       → Nobody
-Sequential step active → Next recipient in sequence
+Sequential next step   → Next recipient in sequence
 Mark as Done           → Origin office
 Forward                → New recipient(s)
-Return to Sender       → Origin + all halted pending (with reason+remarks)
-Routing Halted         → Each halted office (with reason+remarks)
+Return to Sender       → Origin + all halted pending (reason+remarks included)
+Routing Halted         → Each halted office (reason+remarks included)
 Reply                  → Origin office
 Official Note added    → All active participants
 Overdue threshold      → Recipient + Origin office
@@ -472,35 +678,294 @@ Close (forced)         → Pending recipients if routing halted
 
 ---
 
-## Frontend Conventions
+## QR Code
 
-### Composables Pattern
-```typescript
-// All API calls through composables — never in components directly
-// useTransaction.ts → all action methods
-// useActionVisibility.ts → all button computed visibility
-// useToast.ts → toast notifications
-// useDocumentNotes.ts → Official Notes (replaces useComments)
+```php
+use SimpleSoftwareIO\QRCode\Facades\QrCode;
+
+// Generate on document CREATE (not on Release)
+$qrCode = base64_encode(
+    QrCode::format('svg')->size(200)->generate(
+        config('app.url') . '/view/' . $documentNo
+    )
+);
+// Save to documents.qr_code
 ```
 
-### useActionVisibility — All Required Computeds
+---
+
+## Dashboard — Complete Spec
+
+```
+Default route:  /dashboard — landing page after login for ALL users
+Layout:         Fixed. Role-based content.
+Refresh:        Real-time via WebSocket. Fallback: 60s polling.
+Roles:          Regular User | Superior Office | Admin
+
+Widget order (top to bottom):
+  1. OVERDUE          Critical — red — FA past urgency threshold
+  2. FOR ACTION       High — isActive=true, not yet Received, my turn
+  3. PENDING RELEASE  My drafts not yet released
+  4. MY OUTGOING      Active | Returned | Completed sub-tabs
+  5. QUICK STATS      Period selector + delta vs previous period
+  6. ACTIVITY FEED    Last 20 actions that directly affect me
+  7. TEAM PERFORMANCE Superior + Admin only
+  8. SYSTEM HEALTH    Admin only
+
+Quick actions (inline confirm modal — no navigation):
+  Receive    → confirm modal
+  Release    → confirm modal (prerequisites must be met)
+  Close      → confirm modal (status=Completed only, remarks required)
+
+Force navigation to ViewDocument (never inline):
+  Forward | Return to Sender | Mark as Done | Reply
+  Manage Recipients | Edit & Re-release | Subsequent Release
+
+No new DB tables — all derived from Chapter 1 schema.
+```
+
+---
+
+## Reports — Complete Spec
+
+```
+5 report types:
+
+1. Office Performance
+   GET /api/reports/office-performance
+   Export: PDF + Excel
+   Metrics: received, on-time rate, avg time to receive,
+            avg time to complete, return rate, return reasons
+
+2. Document Pipeline
+   GET /api/reports/pipeline
+   Export: PDF + Excel
+   Metrics: by status, overdue list, aged documents
+
+3. ISO Compliance
+   GET /api/reports/compliance
+   Export: PDF + Excel
+   ISO: 9001 (9.1.1, 9.1.3, 8.7, 10.2) + 15489 (8.3, 8.4, 9.8)
+
+4. Transaction Audit
+   GET /api/reports/audit/{docNo}
+   Export: PDF ONLY — never Excel (integrity)
+   Content: full log, versions, parties, attachments, notes
+
+5. Individual Turnaround
+   GET /api/reports/turnaround
+   Export: PDF + Excel
+   Metrics: breakdown by action type, doc type, trend over time
+
+Access control (enforced by ReportAccessService):
+  Regular user → own office data only
+  Superior     → own + all subordinate offices
+  Admin        → all offices, all data
+
+Performance metrics definitions:
+  Time to Receive:  Released log → Received log
+  Time to Complete: Received log → terminal action log
+  On Time:          Time to Complete <= urgency threshold (or due_date)
+  Return Rate:      Count(Returned To Sender) / Count(Received) * 100
+```
+
+---
+
+## Search — Complete Spec
+
+```
+Two entry points:
+  GlobalSearchBar.vue  → nav header, quick dropdown (top 5)
+  SearchView.vue       → /search, full filter panel + results
+
+Filters:
+  document_no, subject (full-text), document_type, action_type,
+  origin_office, recipient_office, status, transaction_type,
+  routing_type, urgency_level, overdue_only,
+  has_attachments, has_notes, has_returned,
+  return_reason, date ranges (released/received/completed/closed),
+  days_since_released, days_overdue
+
+Sort: relevance | date | status | urgency | overdue
+
+Full-text indexes (PostgreSQL GIN):
+  documents.subject
+  document_notes.note
+
+Saved searches: personal only — user_saved_searches table
+AI Assistant: planned — NOT in Chapter 2 scope
+BCC: never exposed to non-origin callers in search results
+```
+
+---
+
+## Templates — Complete Spec
+
+```
+Three scope levels:
+  personal → any user creates, own use only
+  office   → office head or admin creates, all office members use
+  system   → admin creates, all users read
+
+On use:
+  Form pre-filled from template data
+  Subject: always empty and focused — never stored
+  Attachments: always fresh — never stored
+  Recipients: pre-populated, fully editable (add/remove/reorder freely)
+  use_count++ and last_used_at = now() on every use
+
+Save as Template:
+  [Save as Template] button on ViewDocument
+  Origin office only
+  Prompts for name + scope selection
+  Pre-fills from document's current profiling
+
+Duplicate:
+  Any user can duplicate any visible template
+  Creates personal copy — "Copy of [name]"
+  Original unaffected
+```
+
+---
+
+## Notifications — Complete Spec
+
+```
+Notification classes:
+  DocumentReleasedNotification
+  DocumentReceivedNotification
+  DocumentReturnedNotification
+  DocumentDoneNotification
+  DocumentForwardedNotification
+  RoutingHaltedNotification
+  OverdueNotification
+  OfficialNoteAddedNotification
+
+Storage: notifications table (Laravel standard)
+Persistence: permanent — not ephemeral
+Unread count: badge on NotificationBell in nav header
+Email: opt-in per user per event type (user_notification_preferences)
+
+Each notification class:
+  via(): ['database', ...($emailPref ? ['mail'] : [])]
+  toDatabase(): { type, document_no, transaction_no,
+                  subject, message, action_url, from_office }
+```
+
+---
+
+## Key Business Rules — Never Violate
+
+### Chapter 1
+```
+1.  NEVER hard delete DocumentRecipient — isActive=false only
+2.  NEVER manually set Transaction=Completed — use TransactionStatusService
+3.  FA: Receive alone NEVER completes a transaction
+4.  FI: Receive IS the terminal action
+5.  CC/BCC NEVER count toward completion
+6.  Sequential: ONLY active step (lowest seq, no terminal action) can act
+7.  Return to Sender: halts ALL routing — not just the returning office
+8.  Forward: creates NEW transaction_no. Forwarder steps out permanently.
+9.  Reply: creates NEW document_no entirely
+10. Close: origin only, remarks required, any status except Draft/Closed
+11. Manage Recipients remove: only if NO Received log on this transaction
+12. QR code: generated on document CREATE, stored in documents.qr_code
+13. Dissemination of Information: Multiple locked, auto-completes on Release
+14. Urgent Action: urgency_level auto-locked to Urgent, cannot override
+15. Bulk close: Completed documents ONLY
+16. document_comments → deprecated, use document_notes
+17. document_logs → deprecated, use document_transaction_logs
+18. All multi-step DB ops MUST be inside DB::transaction()
+19. Always return full refreshed transaction after every action
+20. BCC recipients hidden from API response for non-origin callers
+```
+
+### Chapter 2
+```
+21. /dashboard is the default landing page after login — always
+22. Dashboard quick actions: Receive, Release, Close ONLY
+23. All other actions force navigation to ViewDocument
+24. Close inline requires remarks even from dashboard
+25. Dashboard real-time via WebSocket — fallback 60s polling
+26. Team Performance: Superior + Admin only
+27. System Health: Admin only
+28. Reports access enforced by ReportAccessService on every endpoint
+29. Transaction Audit export: PDF ONLY — never Excel
+30. All other reports: PDF + Excel
+31. Search access scope same as reports — enforced server-side
+32. BCC never exposed in search results to non-origin callers
+33. Saved searches: personal only — never shared
+34. AI Assistant: planned — NOT implemented in Chapter 2
+35. Template recipients: suggestions only — fully editable on use
+36. Template subject: NEVER stored — always filled fresh
+37. Template attachments: NEVER stored — always fresh
+38. Save as Template: origin office only
+39. Template create scope:
+      personal → any user
+      office   → office head or admin only
+      system   → admin only
+40. Notifications stored permanently — not ephemeral
+41. Email notifications: opt-in per user per event type
+42. All Chapter 2 endpoints: auth:api guard — no exceptions
+43. Role checks: from auth token — never trust client-sent role
+44. Dashboard stats show delta vs previous period
+45. Reports: ReportAccessService::canAccessOffice() before every query
+```
+
+---
+
+## Frontend Conventions
+
+### Composables — All Files
+```typescript
+// Chapter 1
+useTransaction.ts        → transaction action methods
+useActionVisibility.ts   → button computed visibility
+useToast.ts              → toast notifications
+useDocumentNotes.ts      → Official Notes (replaces useComments)
+
+// Chapter 2
+useDashboard.ts          → dashboard data + WebSocket refresh
+useQuickAction.ts        → inline Receive/Release/Close from dashboard
+useReports.ts            → fetch + export reports
+useSearch.ts             → search + saved searches
+useTemplates.ts          → template CRUD + use + saveAsTemplate
+useNotifications.ts      → notifications list + preferences
+useSettings.ts           → profile + preferences + office
+useSignatories.ts        → signatory library + document signatories
+```
+
+### useActionVisibility — All Computeds
 ```typescript
 canReceive            // isActive=true, not received, isActiveSequentialStep
 canRelease            // isOriginator, status=Draft
 canSubsequentRelease  // isActive=true, has Received, default only
-canMarkAsDone         // FA action type, isActive=true, has Received, default only
+canMarkAsDone         // FA, isActive=true, has Received, default only
 canForward            // isActive=true, has Received, default only
-canReturn             // isActive=true, has Received, default only, not returned
-canReply              // isActive=true, has Received (all recipient types)
-canClose              // isOriginator only (any status except Draft/Closed)
+canReturn             // isActive=true, has Received, default only
+canReply              // isActive=true, has Received (any recipient type)
+canClose              // isOriginator only (not Draft, not Closed)
 canManageRecipients   // isOriginator, status=Processing
+```
+
+### Pinia Stores
+```typescript
+// Existing
+useAuthStore()            → auth state, user, office_id, role
+useDocumentStore()        → current document + transaction
+useLibraryStore()         → offices, action types, doc types
+
+// Chapter 2
+useDashboardStore()       → all widget data
+useReportsStore()         → current report + filters
+useSearchStore()          → results + filters + saved searches
+useNotificationsStore()   → notifications list + unread count
 ```
 
 ### Modal Convention
 ```
 Name:    [Verb]Modal.vue
 Emits:   past tense — 'received', 'forwarded', 'returned', 'done', 'replied', 'closed'
-Example: ReceiveModal.vue → emits 'received'
 ```
 
 ### Error Handling
@@ -516,60 +981,64 @@ try {
 
 ---
 
-## QR Code
+## Vue Router — All Routes
 
-```php
-// Install: composer require simplesoftwareio/simple-qrcode
-// Generate on document create (store method):
+```typescript
+// Auth
+{ path: '/login', component: LoginView }
 
-use SimpleSoftwareIO\QRCode\Facades\QrCode;
+// After login → always redirect to /dashboard
+// router.beforeEach: authenticated + path=='/login' → push('/dashboard')
 
-$qrCode = base64_encode(
-    QrCode::format('svg')->size(200)->generate(
-        config('app.url') . '/view/' . $documentNo
-    )
-);
+// Chapter 1
+{ path: '/dashboard',              component: DashboardView }
+{ path: '/incoming',               component: IncomingView }
+{ path: '/documents',              component: MyDocumentsView }
+{ path: '/documents/new',          component: ProfilingView }
+{ path: '/documents/:docNo',       component: ViewDocumentView }
+{ path: '/documents/:docNo/edit',  component: ReReleaseView }
+{ path: '/new-document',           component: CopyToNewView }  // ?from={docNo}
 
-// Save to documents.qr_code
+// Chapter 2
+{ path: '/reports',                      component: ReportsHomeView }
+{ path: '/reports/office-performance',   component: OfficePerformanceView }
+{ path: '/reports/pipeline',             component: PipelineView }
+{ path: '/reports/compliance',           component: ComplianceView }
+{ path: '/reports/audit/:docNo',         component: AuditView }
+{ path: '/reports/turnaround',           component: TurnaroundView }
+{ path: '/search',                       component: SearchView }
+{ path: '/templates',                    component: TemplatesHomeView }
+{ path: '/templates/create',             component: TemplateCreateView }
+{ path: '/templates/:id/edit',           component: TemplateEditView }
+{ path: '/notifications',                component: NotificationsView }
+{ path: '/settings', component: SettingsLayout, children: [
+    { path: 'profile',         component: ProfileView },
+    { path: 'password',        component: PasswordView },
+    { path: 'preferences',     component: PreferencesView },
+    { path: 'notifications',   component: NotificationPrefsView },
+    { path: 'sessions',        component: SessionsView },
+    { path: 'office',          component: OfficeProfileView },
+    { path: 'office/members',  component: OfficeMembersView },
+    { path: 'office/defaults', component: OfficeDefaultsView },
+]}
 ```
 
 ---
 
-## Official Notes Schema
+## App Navigation
 
-```sql
-document_notes:
-  id               bigint auto-increment PK
-  document_no      varchar FK → documents (scope: entire document)
-  transaction_no   varchar FK → document_transactions (context only)
-  note             text NOT NULL
-  office_id        varchar FK → office_libraries
-  office_name      varchar(150)
-  created_by_id    uuid FK → users
-  created_by_name  varchar(150)
-  created_at       timestamp
-  updated_at       timestamp
 ```
+Sidebar:
+  Dashboard          /dashboard        all roles
+  Incoming           /incoming         all roles
+  My Documents       /documents        all roles
+  Search             /search           all roles
+  Reports            /reports          Superior + Admin only
+  Templates          /templates        all roles
+  Settings           /settings         all roles
 
----
-
-## Document Versions Schema
-
-```sql
-document_versions:
-  id                   bigint auto-increment PK
-  document_no          varchar FK → documents
-  transaction_no       varchar FK → document_transactions
-  version_number       int
-  subject              varchar(255)
-  action_type          varchar(50)
-  document_type        varchar(50)
-  origin_type          varchar(50)
-  remarks              varchar(255) nullable
-  recipients_snapshot  json
-  changed_by_id        uuid FK → users
-  changed_by_name      varchar(150)
-  changed_at           timestamp
+Nav Header (left to right):
+  [Sidebar toggle]  [GlobalSearchBar]  [NotificationBell {count}]  [UserAvatar]
 ```
 
 ---
@@ -578,81 +1047,95 @@ document_versions:
 
 ```
 NEVER modify an existing migration file.
-ALWAYS create a new migration for each schema change.
-Use Schema::table() for adding columns to existing tables.
+ALWAYS create a new migration for schema changes.
+Use Schema::table() to add columns to existing tables.
+Always implement down() — migrations must be reversible.
+Test rollback: php artisan migrate:rollback
 
-Naming: YYYY_MM_DD_HHMMSS_descriptive_name.php
-
-For PostgreSQL enum changes — add new column, migrate, drop old:
-  $table->string('status_new')->default('Draft')->after('status');
-  // migrate data in a separate seeder or data migration
-  // then rename/drop
+PostgreSQL enum changes:
+  Add new string column → migrate data → drop old → rename new
 ```
 
 ---
 
-## Implementation Phase Order
+## Git Workflow
 
 ```
-Phase 1 — DB (parallel with all phases, do first)
-  documents status enum update
-  document_transactions: Returned status, parent_transaction_no, urgency_level, due_date
-  document_transaction_logs: new statuses, reason field
-  action_library: type, default_urgency_level, reply_is_terminal, requires_proof, proof_description
-  document_type_library: default_urgency_level
-  documents: allow_copy, qr_code
-  CREATE document_versions
-  CREATE document_notes
+Branches:
+  main          → production, protected, PR only
+  develop       → integration, all features merge here
+  feature/{x}   → one feature per branch, PR to develop
+  fix/{x}       → bug fixes, PR to develop
+  migration/{x} → DB only, reviewed separately
 
-Phase 2 — Core Services
-  TransactionStatusService → FA/FI split logic
-  OverdueService → calculate overdue status
-  NotificationService → unified notification dispatch
+Commit format (Conventional Commits):
+  feat(scope): description
+  fix(scope): description
+  migrate(scope): description
+  refactor(scope): description
+  test(scope): description
 
-Phase 3 — Backend Actions
-  Return to Sender (update existing)
-  Subsequent Release (new)
-  Mark as Done (new)
-  Reply (new)
-  Close single + bulk (new)
-  Edit & Re-release (new)
-  Copy to New Document (new)
-  Manage Recipients (new)
-  Official Notes routes (new)
-  QR Code on create (update store)
-
-Phase 4 — Frontend
-  useActionVisibility full update
-  All new modals
-  My Documents tabs (Draft|Active|Returned|Completed|Closed)
-  Incoming Documents tabs (All|For Action|Overdue|In Progress|Completed|Closed)
-  ViewDocument side panel (Transaction Logs + Official Notes)
-  Status labels update
+Examples:
+  feat(dashboard): implement OverdueWidget with urgency sort
+  feat(reports): add OfficePerformanceReport PDF export
+  migrate(chapter2): create user_saved_searches table
+  fix(sequential): enforce active step guard on Receive
+  feat(frontend): add NotificationBell with unread count badge
 ```
 
 ---
 
-## Key Business Rules — Never Violate
+## How to Give Claude Tasks
+
+Be specific. Reference the spec. State the chapter and module.
+
+### Good Examples
+```
+"Implement DashboardController forAction() method.
+ Route: GET /api/dashboard/for-action.
+ Returns document_recipients where office_id = auth office,
+ isActive=true, no Received log since last activation.
+ Sort: urgency_level (Urgent first) then released_at ASC.
+ Chapter 2, Module 1 — Dashboard."
+
+"Write the migration for create_document_templates_table.
+ Full schema in CLAUDE.md. Include down() method. PostgreSQL."
+
+"Implement ForActionWidget.vue.
+ Shows documents awaiting this office's action.
+ Sorted by urgency (Urgent top) then oldest first.
+ Receive button → QuickActionModal inline confirm.
+ All other actions → navigate to ViewDocument.
+ Uses useDashboard composable. Chapter 2, Module 1."
+```
+
+### Bad Examples
+```
+"Add the dashboard"        ← too vague
+"Fix the action buttons"   ← no context
+"Update the database"      ← which table? which field?
+```
+
+---
+
+## Session Tips
 
 ```
-1.  NEVER hard delete DocumentRecipient — isActive=false only
-2.  NEVER manually set Transaction→Completed — use TransactionStatusService
-3.  FA: Receive alone NEVER completes a transaction
-4.  FI: Receive IS the terminal action
-5.  CC/BCC NEVER count toward completion
-6.  Sequential: ONLY active step (lowest sequence, no terminal action) can act
-7.  Return to Sender: halts ALL routing — not just the returning office
-8.  Forward: creates NEW transaction_no. Forwarder steps out permanently.
-9.  Reply: creates NEW document_no entirely
-10. Close: origin only, always requires remarks, any status except Draft/Closed
-11. Manage Recipients remove: only if NO Received log for that office on this transaction
-12. QR code: generated on document create, stored in documents.qr_code
-13. Dissemination of Information: Multiple routing locked, auto-completes on Release
-14. Urgent Action: urgency_level auto-locked to Urgent, cannot be overridden
-15. Bulk close: Completed documents ONLY — never Active/Returned/Draft
-16. document_comments → deprecated, use document_notes
-17. document_logs → deprecated, use document_transaction_logs
-18. All DB multi-step operations MUST be inside DB::transaction()
-19. Always return full refreshed transaction after every action
-20. BCC recipients hidden from API response for non-origin callers
+Start every session:
+  "Read CLAUDE.md and tell me the current implementation status."
+
+Lost context mid-session:
+  "Re-read CLAUDE.md and the current state of [filename]."
+
+Break complex tasks down:
+  "Do only the migration first."
+  "Now do the controller."
+  "Now do the Vue component."
+
+Always state the chapter and module:
+  "We are in Chapter 1, Phase 3 — Return to Sender."
+  "We are in Chapter 2, Module 1 — Dashboard."
+
+After completing each task:
+  "Update CLAUDE.md Implementation Status to mark [task] as done."
 ```

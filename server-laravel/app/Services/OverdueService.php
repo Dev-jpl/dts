@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\ActionLibrary;
 use App\Models\DocumentTransaction;
+use App\Models\DocumentTransactionLog;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -82,9 +83,56 @@ class OverdueService
     }
 
     /**
-     * Whether this office is currently overdue on this transaction.
+     * Check whether a Received log is overdue (spec-required signature).
+     *
+     * FA default recipients only. Returns false for FI or CC/BCC.
+     * The transaction must have 'recipients' and 'logs' relations loaded
+     * (or they will be lazy-loaded automatically by Eloquent).
+     *
+     * @param  DocumentTransactionLog  $receivedLog  A log with status = 'Received'.
+     * @param  DocumentTransaction     $transaction  The parent transaction.
      */
-    public static function isOverdue(DocumentTransaction $transaction, string $officeId): bool
+    public static function isOverdue(
+        DocumentTransactionLog $receivedLog,
+        DocumentTransaction $transaction
+    ): bool {
+        return self::isOverdueForOffice($transaction, $receivedLog->office_id);
+    }
+
+    /**
+     * Count the number of overdue items for an office.
+     * Used by DashboardController for badge/summary counts.
+     *
+     * Loads all Received logs for the office with their transactions,
+     * then evaluates each via isOverdue().
+     */
+    public static function countOverdueForOffice(string $officeId): int
+    {
+        $logs = DocumentTransactionLog::where('status', 'Received')
+            ->where('office_id', $officeId)
+            ->with([
+                'transaction',
+                'transaction.recipients',
+                'transaction.logs',
+            ])
+            ->get();
+
+        $count = 0;
+
+        foreach ($logs as $log) {
+            if ($log->transaction && self::isOverdue($log, $log->transaction)) {
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
+    /**
+     * Whether this office is currently overdue on this transaction.
+     * Used internally and by getDueDate / getTransactionOverdueMap callers.
+     */
+    public static function isOverdueForOffice(DocumentTransaction $transaction, string $officeId): bool
     {
         // Already completed their obligation — not overdue
         if (self::hasCompletedObligation($transaction, $officeId)) {
@@ -136,7 +184,7 @@ class OverdueService
                 'office_id'   => $recipient->office_id,
                 'office_name' => $recipient->office_name,
                 'due_date'    => $dueDate?->toDateTimeString(),
-                'is_overdue'  => $dueDate ? now()->isAfter($dueDate) : false,
+                'is_overdue'  => $dueDate ? self::isOverdueForOffice($transaction, $recipient->office_id) : false,
                 'days_until'  => $dueDate ? (int) now()->diffInDays($dueDate, false) : null,
             ];
         }

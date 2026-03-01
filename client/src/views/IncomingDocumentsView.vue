@@ -119,11 +119,11 @@ const hasNextPage = computed(() => (pagination.value?.current_page ?? 1) < (pagi
         <div class="relative flex pr-4">
           <div v-for="(tab, index) in INCOMING_TABS" :key="tab.key"
             :ref="el => { if (el) tabRefs[index] = el as HTMLElement }" @click="switchTab(tab.key as IncomingTab)"
-            class="px-3 mb-2 w-[100px] py-2 text-xs text-center cursor-pointer relative"
-            :class="activeTab === tab.key ? 'text-teal-700 font-bold' : 'text-gray-500'">
+            class="px-3 w-[8rem] py-2 text-xs text-center cursor-pointer relative"
+            :class="activeTab === tab.key ? 'text-teal-700 font-bold bg-white rounded-tl-md transition-all duration-150 ease-in-out rounded-tr-md shadow rounded-b-0' : 'text-gray-500'">
             {{ tab.label }}
             <span v-if="counts[tab.key] > 0"
-              class="absolute -top-0.5 -right-0.5 inline-flex items-center justify-center w-4 h-4 text-[10px] font-bold rounded-full"
+              class="absolute right-2 inline-flex items-center justify-center w-4 h-4 text-[10px] font-bold rounded-full"
               :class="tab.key === 'overdue' ? 'bg-red-500 text-white' : 'bg-teal-600 text-white'">
               {{ counts[tab.key] > 99 ? '99+' : counts[tab.key] }}
             </span>
@@ -300,12 +300,13 @@ const hasNextPage = computed(() => (pagination.value?.current_page ?? 1) < (pagi
                   class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] rounded-full font-medium whitespace-nowrap"
                   :class="STATUS_CHIP[deriveStatus(doc, auth.user?.office_id ?? '')]?.classes ?? 'bg-gray-100 text-gray-500'">
                   <span class="size-1.5 rounded-full inline-block flex-shrink-0" :class="{
-                    'bg-blue-500': deriveStatus(doc, auth.user?.office_id ?? '') === 'Awaiting Receipt',
-                    'bg-amber-500': deriveStatus(doc, auth.user?.office_id ?? '') === 'For Processing',
+                    'bg-blue-500':   deriveStatus(doc, auth.user?.office_id ?? '') === 'Awaiting Receipt',
+                    'bg-amber-500':  deriveStatus(doc, auth.user?.office_id ?? '') === 'In Progress',
                     'bg-orange-500': deriveStatus(doc, auth.user?.office_id ?? '') === 'Returned To You',
                     'bg-purple-500': deriveStatus(doc, auth.user?.office_id ?? '') === 'Forwarded',
-                    'bg-red-500': deriveStatus(doc, auth.user?.office_id ?? '') === 'Returned To Sender',
-                    'bg-gray-400': deriveStatus(doc, auth.user?.office_id ?? '') === 'Archived',
+                    'bg-red-500':    deriveStatus(doc, auth.user?.office_id ?? '') === 'Returned To Sender',
+                    'bg-green-500':  deriveStatus(doc, auth.user?.office_id ?? '') === 'Done',
+                    'bg-gray-400':   deriveStatus(doc, auth.user?.office_id ?? '') === 'Closed',
                   }" />
                   {{ STATUS_CHIP[deriveStatus(doc, auth.user?.office_id ?? '')]?.label }}
                 </span>

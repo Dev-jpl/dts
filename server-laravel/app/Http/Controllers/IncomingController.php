@@ -102,17 +102,45 @@ class IncomingController extends Controller
     }
 
     // -------------------------------------------------------------------------
-    // GET /api/incoming/actioned
+    // GET /api/incoming/in-progress
     // -------------------------------------------------------------------------
-    public function actioned(Request $request)
+    public function inProgress(Request $request)
     {
         $officeId = $request->user()->office_id;
         $perPage  = (int) $request->query('per_page', 15);
 
-        $query = DocumentTransactionLog::with(self::WITH)->actioned($officeId);
+        $query = DocumentTransactionLog::with(self::WITH)->inProgress($officeId);
         $data  = $this->applyQueryOptions($query, $request)->paginate($perPage);
 
-        return response()->json(['success' => true, 'tab' => 'actioned', 'data' => $data]);
+        return response()->json(['success' => true, 'tab' => 'in_progress', 'data' => $data]);
+    }
+
+    // -------------------------------------------------------------------------
+    // GET /api/incoming/completed
+    // -------------------------------------------------------------------------
+    public function completed(Request $request)
+    {
+        $officeId = $request->user()->office_id;
+        $perPage  = (int) $request->query('per_page', 15);
+
+        $query = DocumentTransactionLog::with(self::WITH)->completedByOffice($officeId);
+        $data  = $this->applyQueryOptions($query, $request)->paginate($perPage);
+
+        return response()->json(['success' => true, 'tab' => 'completed', 'data' => $data]);
+    }
+
+    // -------------------------------------------------------------------------
+    // GET /api/incoming/closed
+    // -------------------------------------------------------------------------
+    public function closed(Request $request)
+    {
+        $officeId = $request->user()->office_id;
+        $perPage  = (int) $request->query('per_page', 15);
+
+        $query = DocumentTransactionLog::with(self::WITH)->closedForOffice($officeId);
+        $data  = $this->applyQueryOptions($query, $request)->paginate($perPage);
+
+        return response()->json(['success' => true, 'tab' => 'closed', 'data' => $data]);
     }
 
     // -------------------------------------------------------------------------
@@ -140,10 +168,12 @@ class IncomingController extends Controller
         return response()->json([
             'success' => true,
             'counts'  => [
-                'all'        => DocumentTransactionLog::incomingForOffice($officeId)->count(),
-                'for_action' => DocumentTransactionLog::forAction($officeId)->count(),
-                'actioned'   => DocumentTransactionLog::actioned($officeId)->count(),
-                'overdue'    => DocumentTransactionLog::overdue($officeId, self::OVERDUE_DAYS)->count(),
+                'all'         => DocumentTransactionLog::incomingForOffice($officeId)->count(),
+                'for_action'  => DocumentTransactionLog::forAction($officeId)->count(),
+                'overdue'     => DocumentTransactionLog::overdue($officeId, self::OVERDUE_DAYS)->count(),
+                'in_progress' => DocumentTransactionLog::inProgress($officeId)->count(),
+                'completed'   => DocumentTransactionLog::completedByOffice($officeId)->count(),
+                'closed'      => DocumentTransactionLog::closedForOffice($officeId)->count(),
             ],
         ]);
     }

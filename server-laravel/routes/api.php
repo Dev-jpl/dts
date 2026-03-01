@@ -74,12 +74,14 @@ Route::middleware(['auth:api'])->group(function () {
     // Incoming module
     // ─────────────────────────────────────────────────────────────────────
     Route::prefix('incoming')->group(function () {
-        Route::get('/',           [IncomingController::class, 'index']);
-        Route::get('/for-action', [IncomingController::class, 'forAction']);
-        Route::get('/actioned',   [IncomingController::class, 'actioned']);
-        Route::get('/overdue',    [IncomingController::class, 'overdue']);
-        Route::get('/counts',     [IncomingController::class, 'counts']);
-        Route::get('/filters',    [IncomingController::class, 'filters']);
+        Route::get('/',            [IncomingController::class, 'index']);
+        Route::get('/for-action',  [IncomingController::class, 'forAction']);
+        Route::get('/overdue',     [IncomingController::class, 'overdue']);
+        Route::get('/in-progress', [IncomingController::class, 'inProgress']);
+        Route::get('/completed',   [IncomingController::class, 'completed']);
+        Route::get('/closed',      [IncomingController::class, 'closed']);
+        Route::get('/counts',      [IncomingController::class, 'counts']);
+        Route::get('/filters',     [IncomingController::class, 'filters']);
     });
 });
 

@@ -3,10 +3,8 @@
 namespace App\Services;
 
 use App\Models\Document;
-use App\Models\DocumentNote;
-use App\Models\DocumentRecipient;
 use App\Models\DocumentTransaction;
-use App\Models\User;
+use App\Models\DocumentTransactionLog;
 use Illuminate\Support\Collection;
 
 /**
@@ -19,7 +17,7 @@ use Illuminate\Support\Collection;
  * Wire up to actual channels (database, mail, push) in a future phase.
  *
  * TRIGGER MAP (from CLAUDE.md):
- *   Initial Release        → All recipients including CC/BCC
+ *   Release                → All recipients including CC/BCC
  *   Subsequent Release     → Target office only
  *   Receive (default)      → Origin office
  *   Receive (CC/BCC)       → Nobody
@@ -40,9 +38,9 @@ class NotificationService
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * Initial Release → notify all recipients (default, CC, BCC).
+     * Release → notify all recipients (default, CC, BCC).
      */
-    public static function onInitialRelease(DocumentTransaction $transaction): void
+    public static function onRelease(DocumentTransaction $transaction): void
     {
         $recipients = $transaction->recipients->where('isActive', true);
 
@@ -64,11 +62,11 @@ class NotificationService
     public static function onSubsequentRelease(DocumentTransaction $transaction, string $targetOfficeId, string $targetOfficeName): void
     {
         self::dispatch($targetOfficeId, 'subsequent_release', [
-            'transaction_no'    => $transaction->transaction_no,
-            'document_no'       => $transaction->document_no,
-            'subject'           => $transaction->subject,
-            'from_office'       => $transaction->office_name,
-            'target_office_id'  => $targetOfficeId,
+            'transaction_no'     => $transaction->transaction_no,
+            'document_no'        => $transaction->document_no,
+            'subject'            => $transaction->subject,
+            'from_office'        => $transaction->office_name,
+            'target_office_id'   => $targetOfficeId,
             'target_office_name' => $targetOfficeName,
         ]);
     }
@@ -81,18 +79,25 @@ class NotificationService
      * Receive (default recipient) → notify the origin office.
      * CC/BCC receives do not trigger notifications.
      */
-    public static function onReceive(DocumentTransaction $transaction, string $receivingOfficeId, string $receivingOfficeName, string $recipientType): void
+    public static function onReceive(DocumentTransactionLog $log): void
     {
-        if ($recipientType !== 'default') {
+        $log->loadMissing('transaction.recipients');
+        $transaction = $log->transaction;
+
+        $recipient = $transaction->recipients
+            ->where('office_id', $log->office_id)
+            ->first();
+
+        if (!$recipient || $recipient->recipient_type !== 'default') {
             return; // CC/BCC: no notification
         }
 
         self::dispatch($transaction->office_id, 'document_received', [
-            'transaction_no'       => $transaction->transaction_no,
-            'document_no'          => $transaction->document_no,
-            'subject'              => $transaction->subject,
-            'receiving_office_id'  => $receivingOfficeId,
-            'receiving_office_name' => $receivingOfficeName,
+            'transaction_no'        => $transaction->transaction_no,
+            'document_no'           => $transaction->document_no,
+            'subject'               => $transaction->subject,
+            'receiving_office_id'   => $log->office_id,
+            'receiving_office_name' => $log->office_name,
         ]);
     }
 
@@ -102,13 +107,13 @@ class NotificationService
     public static function onSequentialStepActivated(DocumentTransaction $transaction, string $nextOfficeId, string $nextOfficeName): void
     {
         self::dispatch($nextOfficeId, 'sequential_step_activated', [
-            'transaction_no'    => $transaction->transaction_no,
-            'document_no'       => $transaction->document_no,
-            'subject'           => $transaction->subject,
-            'action_type'       => $transaction->action_type,
-            'from_office'       => $transaction->office_name,
-            'next_office_id'    => $nextOfficeId,
-            'next_office_name'  => $nextOfficeName,
+            'transaction_no'   => $transaction->transaction_no,
+            'document_no'      => $transaction->document_no,
+            'subject'          => $transaction->subject,
+            'action_type'      => $transaction->action_type,
+            'from_office'      => $transaction->office_name,
+            'next_office_id'   => $nextOfficeId,
+            'next_office_name' => $nextOfficeName,
         ]);
     }
 
@@ -132,50 +137,56 @@ class NotificationService
 
     /**
      * Forward → notify the new recipient(s).
+     *
+     * @param  array<array{office_id: string, office_name: string}>  $newRecipients
      */
-    public static function onForward(DocumentTransaction $transaction, string $targetOfficeId, string $targetOfficeName): void
+    public static function onForward(DocumentTransactionLog $log, array $newRecipients): void
     {
-        self::dispatch($targetOfficeId, 'document_forwarded', [
-            'transaction_no'     => $transaction->transaction_no,
-            'document_no'        => $transaction->document_no,
-            'subject'            => $transaction->subject,
-            'action_type'        => $transaction->action_type,
-            'from_office'        => $transaction->office_name,
-            'target_office_id'   => $targetOfficeId,
-            'target_office_name' => $targetOfficeName,
-        ]);
+        $log->loadMissing('transaction');
+        $transaction = $log->transaction;
+
+        foreach ($newRecipients as $recipient) {
+            self::dispatch($recipient['office_id'], 'document_forwarded', [
+                'transaction_no'     => $transaction->transaction_no,
+                'document_no'        => $transaction->document_no,
+                'subject'            => $transaction->subject,
+                'action_type'        => $transaction->action_type,
+                'from_office'        => $log->office_name,
+                'target_office_id'   => $recipient['office_id'],
+                'target_office_name' => $recipient['office_name'],
+            ]);
+        }
     }
 
     /**
-     * Return to Sender → notify the origin office + all halted (now-inactive) offices.
+     * Return to Sender → notify the origin office + all halted offices.
+     *
+     * @param  array<array{office_id: string, office_name: string}>  $haltedOffices
      */
-    public static function onReturnToSender(
-        DocumentTransaction $transaction,
-        string $returningOfficeId,
-        string $returningOfficeName,
-        string $reason,
-        ?string $remarks,
-        Collection $haltedOffices  // collection of DocumentRecipient
-    ): void {
+    public static function onReturnToSender(DocumentTransactionLog $log, array $haltedOffices): void
+    {
+        $log->loadMissing('transaction');
+        $transaction = $log->transaction;
+
         $payload = [
             'transaction_no'        => $transaction->transaction_no,
             'document_no'           => $transaction->document_no,
             'subject'               => $transaction->subject,
-            'returning_office_id'   => $returningOfficeId,
-            'returning_office_name' => $returningOfficeName,
-            'reason'                => $reason,
-            'remarks'               => $remarks,
+            'returning_office_id'   => $log->office_id,
+            'returning_office_name' => $log->office_name,
+            'reason'                => $log->reason,
+            'remarks'               => $log->remarks,
         ];
 
         // Notify origin
         self::dispatch($transaction->office_id, 'returned_to_sender', $payload);
 
         // Notify each halted office
-        foreach ($haltedOffices as $recipient) {
-            if ($recipient->office_id === $transaction->office_id) {
+        foreach ($haltedOffices as $office) {
+            if ($office['office_id'] === $transaction->office_id) {
                 continue; // already notified above
             }
-            self::dispatch($recipient->office_id, 'routing_halted', $payload);
+            self::dispatch($office['office_id'], 'routing_halted', $payload);
         }
     }
 
@@ -194,18 +205,25 @@ class NotificationService
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Notes / Close
+    // Notes / Overdue / Close
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
      * Official Note added → notify all active participants.
-     * Active participants = origin + isActive=true default recipients.
+     * Active participants = origin + isActive=true default recipients across all transactions.
      */
-    public static function onOfficialNoteAdded(Document $document, DocumentNote $note): void
+    public static function onOfficialNoteAdded(string $documentNo): void
     {
+        $document = Document::with(['transactions.recipients'])
+            ->where('document_no', $documentNo)
+            ->first();
+
+        if (!$document) {
+            return;
+        }
+
         $officeIds = collect([$document->office_id]);
 
-        // Collect all active default recipients across all active transactions
         foreach ($document->transactions as $transaction) {
             $transaction->recipients
                 ->where('recipient_type', 'default')
@@ -215,10 +233,7 @@ class NotificationService
 
         foreach ($officeIds->unique() as $officeId) {
             self::dispatch($officeId, 'official_note_added', [
-                'document_no'    => $document->document_no,
-                'subject'        => $document->subject,
-                'note_excerpt'   => mb_substr($note->note, 0, 100),
-                'from_office'    => $note->office_name,
+                'document_no' => $documentNo,
             ]);
         }
     }
@@ -226,20 +241,19 @@ class NotificationService
     /**
      * Overdue threshold crossed → notify the overdue office + origin office.
      */
-    public static function onOverdueThreshold(DocumentTransaction $transaction, string $officeId, string $officeName, int $daysPastDue): void
+    public static function onOverdue(DocumentTransactionLog $receivedLog, DocumentTransaction $transaction): void
     {
         $payload = [
             'transaction_no' => $transaction->transaction_no,
             'document_no'    => $transaction->document_no,
             'subject'        => $transaction->subject,
-            'office_id'      => $officeId,
-            'office_name'    => $officeName,
-            'days_past_due'  => $daysPastDue,
+            'office_id'      => $receivedLog->office_id,
+            'office_name'    => $receivedLog->office_name,
         ];
 
-        self::dispatch($officeId, 'overdue_recipient', $payload);
+        self::dispatch($receivedLog->office_id, 'overdue_recipient', $payload);
 
-        if ($officeId !== $transaction->office_id) {
+        if ($receivedLog->office_id !== $transaction->office_id) {
             self::dispatch($transaction->office_id, 'overdue_origin', $payload);
         }
     }
