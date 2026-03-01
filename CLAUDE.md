@@ -994,6 +994,9 @@ try {
 { path: '/dashboard',              component: DashboardView }
 { path: '/incoming',               component: IncomingView }
 { path: '/documents',              component: MyDocumentsView }
+{ path: '/documents/received', component: ReceivedView },
+{ path: '/documents/released', component: ReleasedView },
+{ path: '/documents/archived', component: ArchivedView },
 { path: '/documents/new',          component: ProfilingView }
 { path: '/documents/:docNo',       component: ViewDocumentView }
 { path: '/documents/:docNo/edit',  component: ReReleaseView }
@@ -1025,17 +1028,50 @@ try {
 
 ---
 
+**Sidebar component — collapsible Documents section:**
+```
+Documents parent item:
+  Click → toggles open/closed
+  Active if any child route is active
+
+Children shown when expanded:
+  My Documents  → /documents
+  Received      → /documents/received
+  Released      → /documents/released
+  Archived      → /documents/archived
+```
+
+**Tab mapping to existing spec:**
+```
+My Documents  → documents where office_id = auth office (origin view)
+               tabs: Draft | Active | Returned | Completed | Closed
+
+Received      → incoming documents (recipient view)
+               tabs: All | For Action | Overdue | In Progress | Completed | Closed
+
+Released      → documents released by this office, tracking recipient status
+               shows: active routing progress per recipient
+
+Archived      → Closed documents — read-only repository
+               searchable, downloadable
+```
+---
+
 ## App Navigation
 
 ```
 Sidebar:
-  Dashboard          /dashboard        all roles
-  Incoming           /incoming         all roles
-  My Documents       /documents        all roles
-  Search             /search           all roles
-  Reports            /reports          Superior + Admin only
-  Templates          /templates        all roles
-  Settings           /settings         all roles
+  Dashboard          /dashboard              all roles
+  Incoming           /incoming               all roles
+  Documents                                  toggle only
+    My Documents     /documents              all roles
+    Received         /documents/received     all roles
+    Released         /documents/released     all roles
+    Archived         /documents/archived     all roles
+  Search             /search                 all roles
+  Reports            /reports                Superior + Admin only
+  Templates          /templates              all roles
+  Settings           /settings               all roles
 
 Nav Header (left to right):
   [Sidebar toggle]  [GlobalSearchBar]  [NotificationBell {count}]  [UserAvatar]
