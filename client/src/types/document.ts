@@ -20,13 +20,15 @@ export interface UploadedFile {
     size: string;
     size_bytes: number;
     type: string;
-    url: string;
+    url?: string;
     temp_path: string;
     uploaded_at?: string | null;
     document_id?: string | null;
     id?: number;
     width?: number | null;
     height?: number | null;
+    source?: 'upload' | 'repository';
+    office_file_id?: number;
 }
 
 interface BindedDocuments {

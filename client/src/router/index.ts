@@ -1,10 +1,12 @@
 
 import ForReleasingView from '@/views/ForReleasingView.vue'
+import ReportsHomeView from '@/views/reports/ReportsHomeView.vue'
 import IncomingDocumentsView from '@/views/IncomingDocumentsView.vue'
 import MyDocumentsView from '@/views/MyDocumentsView.vue'
 import { createRouter, createWebHistory } from 'vue-router'
 import DocumentsReceivedView from '@/views/DocumentsReceivedView.vue'
 import DocumentsReleasedView from '@/views/DocumentsReleasedView.vue'
+import DocumentsOutgoingView from '@/views/DocumentsOutgoingView.vue'
 import DocumentsArchivedView from '@/views/DocumentsArchivedView.vue'
 import AdvanceSearchView from '@/views/AdvanceSearchView.vue'
 import AdminView from '@/views/AdminView.vue'
@@ -81,7 +83,7 @@ const router = createRouter({
       },
     },
     {
-      path: '/transactions',
+      path: '/user',
       children: [
         {
           path: 'user-profile',
@@ -276,6 +278,19 @@ const router = createRouter({
           },
         },
         {
+          path: 'outgoing',
+          name: 'documents-outgoing',
+          component: DocumentsOutgoingView,
+          meta: {
+            label: 'Outgoing Documents',
+            requiresAuth: true,
+            breadcrumb: {
+              parent: 'document',
+              group: 'documents',
+            }
+          },
+        },
+        {
           path: 'archived',
           name: 'documents-archived',
           component: DocumentsArchivedView,
@@ -315,17 +330,73 @@ const router = createRouter({
       path: '/admin',
       name: 'admin',
       meta: {
-        label: 'Admin'
+        label: 'Admin',
+        requiresAuth: true,
       },
-      component: AdminView,
+      redirect: { name: 'admin-library' },
+    },
+    {
+      path: '/admin/library',
+      name: 'admin-library',
+      meta: {
+        label: 'Library Management',
+        requiresAuth: true,
+      },
+      component: () => import('../views/admin/LibraryManagementView.vue'),
+    },
+    {
+      path: '/admin/signatories',
+      name: 'admin-signatories',
+      meta: {
+        label: 'Signatory Management',
+        requiresAuth: true,
+      },
+      component: () => import('../views/admin/SignatoryManagementView.vue'),
+    },
+    {
+      path: '/admin/users',
+      name: 'admin-users',
+      meta: {
+        label: 'User Management',
+        requiresAuth: true,
+      },
+      component: () => import('../views/admin/UserManagementView.vue'),
+    },
+    {
+      path: '/admin/settings',
+      name: 'admin-settings',
+      meta: {
+        label: 'System Settings',
+        requiresAuth: true,
+      },
+      component: () => import('../views/admin/SystemSettingsView.vue'),
     },
     {
       path: '/templates',
-      name: 'templates',
+      name: 'my-templates',
       meta: {
-        label: 'Templates'
+        label: 'My Templates',
+        requiresAuth: true,
       },
       component: TemplatesView,
+    },
+    {
+      path: '/templates/create',
+      name: 'template-create',
+      meta: {
+        label: 'Create Template',
+        requiresAuth: true,
+      },
+      component: () => import('../views/TemplateCreateView.vue'),
+    },
+    {
+      path: '/templates/:id/edit',
+      name: 'template-edit',
+      meta: {
+        label: 'Edit Template',
+        requiresAuth: true,
+      },
+      component: () => import('../views/TemplateEditView.vue'),
     },
     {
       path: '/view-document/:trxNo',
@@ -335,6 +406,112 @@ const router = createRouter({
       },
       component: () => import('../views/ViewDocument.vue'),
     },
+
+    // ── Files management module ─────────────────────────────────────────────────
+    {
+      path: '/files',
+      name: 'files-management',
+      component: () => import('../views/FilesManagementView.vue'),
+      meta: { label: 'Files', requiresAuth: true },
+    },
+
+    // ── Reports module ────────────────────────────────────────────────────────
+    {
+      path: '/reports',
+      name: 'reports',
+      component: ReportsHomeView,
+      meta: { label: 'Reports', requiresAuth: true },
+    },
+    {
+      path: '/reports/office-performance',
+      name: 'reports-office-performance',
+      component: () => import('../views/reports/OfficePerformanceView.vue'),
+      meta: { label: 'Office Performance', requiresAuth: true },
+    },
+    {
+      path: '/reports/pipeline',
+      name: 'reports-pipeline',
+      component: () => import('../views/reports/PipelineView.vue'),
+      meta: { label: 'Document Pipeline', requiresAuth: true },
+    },
+    {
+      path: '/reports/compliance',
+      name: 'reports-compliance',
+      component: () => import('../views/reports/ComplianceView.vue'),
+      meta: { label: 'ISO Compliance', requiresAuth: true },
+    },
+    {
+      path: '/reports/audit',
+      name: 'reports-audit',
+      component: () => import('../views/reports/AuditView.vue'),
+      meta: { label: 'Transaction Audit', requiresAuth: true },
+    },
+    {
+      path: '/reports/turnaround',
+      name: 'reports-turnaround',
+      component: () => import('../views/reports/TurnaroundView.vue'),
+      meta: { label: 'Turnaround', requiresAuth: true },
+    },
+
+    // ── Settings module ────────────────────────────────────────────────────────
+    {
+      path: '/settings',
+      name: 'settings',
+      component: () => import('../views/settings/SettingsLayout.vue'),
+      meta: { label: 'Settings', requiresAuth: true },
+      redirect: '/settings/profile',
+      children: [
+        {
+          path: 'profile',
+          name: 'settings-profile',
+          component: () => import('../views/settings/ProfileView.vue'),
+          meta: { label: 'Profile', requiresAuth: true },
+        },
+        {
+          path: 'password',
+          name: 'settings-password',
+          component: () => import('../views/settings/PasswordView.vue'),
+          meta: { label: 'Password', requiresAuth: true },
+        },
+        {
+          path: 'preferences',
+          name: 'settings-preferences',
+          component: () => import('../views/settings/PreferencesView.vue'),
+          meta: { label: 'Preferences', requiresAuth: true },
+        },
+        {
+          path: 'notifications',
+          name: 'settings-notifications',
+          component: () => import('../views/settings/NotificationPrefsView.vue'),
+          meta: { label: 'Notifications', requiresAuth: true },
+        },
+        {
+          path: 'sessions',
+          name: 'settings-sessions',
+          component: () => import('../views/settings/SessionsView.vue'),
+          meta: { label: 'Sessions', requiresAuth: true },
+        },
+        {
+          path: 'office',
+          name: 'settings-office',
+          component: () => import('../views/settings/OfficeProfileView.vue'),
+          meta: { label: 'Office Profile', requiresAuth: true },
+        },
+        {
+          path: 'office/members',
+          name: 'settings-office-members',
+          component: () => import('../views/settings/OfficeMembersView.vue'),
+          meta: { label: 'Office Members', requiresAuth: true },
+        },
+        {
+          path: 'office/defaults',
+          name: 'settings-office-defaults',
+          component: () => import('../views/settings/OfficeDefaultsView.vue'),
+          meta: { label: 'Office Defaults', requiresAuth: true },
+        },
+      ],
+    },
+
 
   ],
 })

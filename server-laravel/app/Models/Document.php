@@ -11,6 +11,10 @@ class Document extends Model
         'document_type',
         'action_type',
         'origin_type',
+        'sender',
+        'sender_position',
+        'sender_office',
+        'sender_email',
         'subject',
         'remarks',
         'status',
@@ -21,6 +25,11 @@ class Document extends Model
         'created_by_id',
         'created_by_name',
         'isActive',
+    ];
+
+    protected $casts = [
+        'isActive'   => 'boolean',
+        'allow_copy' => 'boolean',
     ];
 
     protected $primaryKey = 'document_no';

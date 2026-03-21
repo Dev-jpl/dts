@@ -81,7 +81,14 @@ class IncomingController extends Controller
         $officeId = $request->user()->office_id;
         $perPage  = (int) $request->query('per_page', 15);
 
-        $query = DocumentTransactionLog::with(self::WITH)->incomingForOffice($officeId);
+        // Get latest log ID per transaction to ensure one row per transaction
+        $latestIds = DocumentTransactionLog::incomingForOffice($officeId)
+            ->selectRaw('MAX(id) as id')
+            ->groupBy('transaction_no');
+
+        $query = DocumentTransactionLog::with(self::WITH)
+            ->whereIn('id', $latestIds);
+
         $data  = $this->applyQueryOptions($query, $request)->paginate($perPage);
 
         return response()->json(['success' => true, 'tab' => 'all', 'data' => $data]);
@@ -95,7 +102,14 @@ class IncomingController extends Controller
         $officeId = $request->user()->office_id;
         $perPage  = (int) $request->query('per_page', 15);
 
-        $query = DocumentTransactionLog::with(self::WITH)->forAction($officeId);
+        // Get latest log ID per transaction to ensure one row per transaction
+        $latestIds = DocumentTransactionLog::forAction($officeId)
+            ->selectRaw('MAX(id) as id')
+            ->groupBy('transaction_no');
+
+        $query = DocumentTransactionLog::with(self::WITH)
+            ->whereIn('id', $latestIds);
+
         $data  = $this->applyQueryOptions($query, $request)->paginate($perPage);
 
         return response()->json(['success' => true, 'tab' => 'for_action', 'data' => $data]);
@@ -109,7 +123,14 @@ class IncomingController extends Controller
         $officeId = $request->user()->office_id;
         $perPage  = (int) $request->query('per_page', 15);
 
-        $query = DocumentTransactionLog::with(self::WITH)->inProgress($officeId);
+        // Get latest log ID per transaction to ensure one row per transaction
+        $latestIds = DocumentTransactionLog::inProgress($officeId)
+            ->selectRaw('MAX(id) as id')
+            ->groupBy('transaction_no');
+
+        $query = DocumentTransactionLog::with(self::WITH)
+            ->whereIn('id', $latestIds);
+
         $data  = $this->applyQueryOptions($query, $request)->paginate($perPage);
 
         return response()->json(['success' => true, 'tab' => 'in_progress', 'data' => $data]);
@@ -123,7 +144,14 @@ class IncomingController extends Controller
         $officeId = $request->user()->office_id;
         $perPage  = (int) $request->query('per_page', 15);
 
-        $query = DocumentTransactionLog::with(self::WITH)->completedByOffice($officeId);
+        // Get latest log ID per transaction to ensure one row per transaction
+        $latestIds = DocumentTransactionLog::completedByOffice($officeId)
+            ->selectRaw('MAX(id) as id')
+            ->groupBy('transaction_no');
+
+        $query = DocumentTransactionLog::with(self::WITH)
+            ->whereIn('id', $latestIds);
+
         $data  = $this->applyQueryOptions($query, $request)->paginate($perPage);
 
         return response()->json(['success' => true, 'tab' => 'completed', 'data' => $data]);
@@ -137,7 +165,14 @@ class IncomingController extends Controller
         $officeId = $request->user()->office_id;
         $perPage  = (int) $request->query('per_page', 15);
 
-        $query = DocumentTransactionLog::with(self::WITH)->closedForOffice($officeId);
+        // Get latest log ID per transaction to ensure one row per transaction
+        $latestIds = DocumentTransactionLog::closedForOffice($officeId)
+            ->selectRaw('MAX(id) as id')
+            ->groupBy('transaction_no');
+
+        $query = DocumentTransactionLog::with(self::WITH)
+            ->whereIn('id', $latestIds);
+
         $data  = $this->applyQueryOptions($query, $request)->paginate($perPage);
 
         return response()->json(['success' => true, 'tab' => 'closed', 'data' => $data]);
@@ -152,7 +187,14 @@ class IncomingController extends Controller
         $perPage  = (int) $request->query('per_page', 15);
         $days     = (int) $request->query('days', self::OVERDUE_DAYS);
 
-        $query = DocumentTransactionLog::with(self::WITH)->overdue($officeId, $days);
+        // Get latest log ID per transaction to ensure one row per transaction
+        $latestIds = DocumentTransactionLog::overdue($officeId, $days)
+            ->selectRaw('MAX(id) as id')
+            ->groupBy('transaction_no');
+
+        $query = DocumentTransactionLog::with(self::WITH)
+            ->whereIn('id', $latestIds);
+
         $data  = $this->applyQueryOptions($query, $request)->paginate($perPage);
 
         return response()->json(['success' => true, 'tab' => 'overdue', 'threshold_days' => $days, 'data' => $data]);
@@ -165,15 +207,16 @@ class IncomingController extends Controller
     {
         $officeId = $request->user()->office_id;
 
+        // Count distinct transactions, not log entries
         return response()->json([
             'success' => true,
             'counts'  => [
-                'all'         => DocumentTransactionLog::incomingForOffice($officeId)->count(),
-                'for_action'  => DocumentTransactionLog::forAction($officeId)->count(),
-                'overdue'     => DocumentTransactionLog::overdue($officeId, self::OVERDUE_DAYS)->count(),
-                'in_progress' => DocumentTransactionLog::inProgress($officeId)->count(),
-                'completed'   => DocumentTransactionLog::completedByOffice($officeId)->count(),
-                'closed'      => DocumentTransactionLog::closedForOffice($officeId)->count(),
+                'all'         => DocumentTransactionLog::incomingForOffice($officeId)->distinct('transaction_no')->count('transaction_no'),
+                'for_action'  => DocumentTransactionLog::forAction($officeId)->distinct('transaction_no')->count('transaction_no'),
+                'overdue'     => DocumentTransactionLog::overdue($officeId, self::OVERDUE_DAYS)->distinct('transaction_no')->count('transaction_no'),
+                'in_progress' => DocumentTransactionLog::inProgress($officeId)->distinct('transaction_no')->count('transaction_no'),
+                'completed'   => DocumentTransactionLog::completedByOffice($officeId)->distinct('transaction_no')->count('transaction_no'),
+                'closed'      => DocumentTransactionLog::closedForOffice($officeId)->distinct('transaction_no')->count('transaction_no'),
             ],
         ]);
     }

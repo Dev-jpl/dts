@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, watch } from "vue";
 import { RouterView } from "vue-router";
 import DefaultLayout from "@/layouts/DefaultLayout.vue";
 import { useAuthStore } from "./stores/auth";
@@ -8,6 +8,15 @@ import ToastNotification from "./components/ui/toasts/ToastNotification.vue";
 
 const auth = useAuthStore();
 const ready = ref(false);
+
+// Debug logging
+console.log('🔄 App.vue: Initial state', { token: !!auth.token, ready: ready.value })
+watch(() => auth.token, (newToken) => {
+  console.log('🔄 App.vue: Token changed', { token: !!newToken })
+})
+watch(ready, (newReady) => {
+  console.log('🔄 App.vue: Ready changed', { ready: newReady, token: !!auth.token })
+})
 
 // ── FIX: await fetchUser so auth.user is populated before anything renders ──
 // Without await, components mount with auth.user = null, then update too late

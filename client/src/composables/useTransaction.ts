@@ -78,7 +78,8 @@ export function useTransaction(initial?: Transaction) {
 
     async function releaseDocument(trxNo: string, payload: {
         remarks?: string | null
-        routed_office?: any
+        routing?: string
+        recipients?: any[]
     }) {
         const { data } = await API.post(`/transactions/${trxNo}/release`, payload)
         if (data.data) setTransaction(data.data)
@@ -113,6 +114,7 @@ export function useTransaction(initial?: Transaction) {
 
     async function markAsDone(trxNo: string, payload: {
         remarks?: string | null
+        proof_file_id?: string | null
     }) {
         const { data } = await API.post(`/transactions/${trxNo}/done`, payload)
         if (data.data) setTransaction(data.data)
@@ -182,6 +184,11 @@ export function useTransaction(initial?: Transaction) {
         return data
     }
 
+    async function deleteDraft(trxNo: string) {
+        const { data } = await API.delete(`/transactions/${trxNo}`)
+        return data
+    }
+
     // ── Helper: full refresh (transaction + formatted logs) ───────────────────
     async function refreshTransaction(trxNo: string) {
         await Promise.all([
@@ -229,6 +236,7 @@ export function useTransaction(initial?: Transaction) {
         replyToDocument,
         manageRecipients,
         closeDocument,
+        deleteDraft,
 
         // Utility
         refreshTransaction,

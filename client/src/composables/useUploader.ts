@@ -2,6 +2,7 @@ import { ref, computed, type Ref, reactive } from 'vue'
 import { formatSize } from '@/utils/formatSize'
 import axios from 'axios'
 import { useAuthStore } from '@/stores/auth'
+import { baseURL } from '@/api'
 
 export interface UploadTask {
     name: string
@@ -102,12 +103,13 @@ export function useUploader() {
             const formData = new FormData();
             console.log('task', task);
 
-            // formData.append("files", task.file);
-            formData.append("files[]", task.file);  // ← was "files", needs to be "files[]"
+            formData.append("file", task.file);
 
             const xhr = new XMLHttpRequest();
-            xhr.open("POST", "http://localhost:8000/api/upload/temp", true);
+            // xhr.open("POST", "http://127.0.0.1:8000/api/upload/temp", true);
+            xhr.open("POST", `${baseURL}/api/upload/temp`, true);
             xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+            xhr.setRequestHeader("Accept", "application/json");
 
             xhr.upload.onprogress = (event) => {
                 if (event.lengthComputable) {
@@ -121,17 +123,11 @@ export function useUploader() {
                     try {
                         const rawResponse = JSON.parse(xhr.responseText);
 
-                        console.log('XHR RAW RESPONSE:', rawResponse);        // what Laravel actually sent
-                        console.log('XHR fileData:', rawResponse[0]);         // what we're resolving with
-
-                        // Laravel wraps response in { message, data: [...] }
-                        const fileData = Array.isArray(rawResponse)
-                            ? rawResponse[0]           // flat array (if you change Laravel later)
-                            : rawResponse.data?.[0];   // wrapped { data: [...] }
-
                         resolve({
-                            ...fileData,
+                            temp_path: rawResponse.temp_path,
                             original_name: task.name,
+                            size: task.file.size,
+                            mime_type: task.file.type,
                         });
                     } catch {
                         task.error = true;

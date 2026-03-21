@@ -27,6 +27,11 @@ class DocumentTransaction extends Model
         'isActive',
     ];
 
+    protected $casts = [
+        'isActive' => 'boolean',
+        'due_date' => 'date',
+    ];
+
     protected $primaryKey = 'transaction_no';
     public $incrementing = false;
     protected $keyType = 'string';

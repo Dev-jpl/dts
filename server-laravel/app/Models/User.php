@@ -43,6 +43,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'isActive' => 'boolean',
         ];
     }
 
@@ -50,6 +51,11 @@ class User extends Authenticatable
     public function office()
     {
         return $this->belongsTo(OfficeLibrary::class, 'office_id', 'id');
+    }
+
+    public function preferences()
+    {
+        return $this->hasOne(UserPreference::class, 'user_id', 'id');
     }
 
 
@@ -69,6 +75,10 @@ class User extends Authenticatable
     public function comments()
     {
         return $this->hasMany(DocumentComment::class, 'assigned_personnel_id', 'id');
+    }
+    public function notificationPreferences()
+    {
+        return $this->hasMany(UserNotificationPreference::class, 'user_id', 'id');
     }
 
     // Many-to-Many

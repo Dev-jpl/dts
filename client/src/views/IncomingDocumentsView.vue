@@ -18,24 +18,10 @@ const {
   switchTab, setSort, clearFilters, refresh,
 } = useIncoming()
 
-// ── Sliding tab indicator (matches existing pattern) ──
-const tabRefs = ref<HTMLElement[]>([])
-const indicatorStyle = ref({})
-
-function updateIndicator() {
-  const index = INCOMING_TABS.findIndex(t => t.key === activeTab.value)
-  const el = tabRefs.value[index]
-  if (el) {
-    indicatorStyle.value = { left: el.offsetLeft + 'px', width: el.offsetWidth + 'px' }
-  }
-}
-
 onMounted(async () => {
-  updateIndicator()
   fetchFilterOptions()
   refresh()
 })
-watch(activeTab, () => updateIndicator())
 
 // ── Expandable text ──
 const { getDisplayText } = useExpandableTextArray(250)
@@ -106,30 +92,41 @@ const hasNextPage = computed(() => (pagination.value?.current_page ?? 1) < (pagi
 </script>
 
 <template>
-  <ScrollableContainer padding="0" rem="50px" background="white" class="bg-white">
+  <ScrollableContainer padding="0" px="50px" background="white" class="bg-white">
     <div class="w-full">
 
       <!-- ── Header + Tabs ─────────────────────────────────────────────── -->
       <div
         class="flex flex-col items-start justify-start w-full border-b border-gray-200 sm:items-end sm:flex-row sm:justify-between">
         <div class="p-4">
-          <h1 class="font-bold text-gray-600">Incoming Documents</h1>
+          <h1 class="text-lg font-bold text-gray-700">Incoming Documents</h1>
+          <p class="text-xs text-gray-400">Documents routed to your office</p>
         </div>
 
-        <div class="relative flex pr-4">
-          <div v-for="(tab, index) in INCOMING_TABS" :key="tab.key"
-            :ref="el => { if (el) tabRefs[index] = el as HTMLElement }" @click="switchTab(tab.key as IncomingTab)"
-            class="px-3 w-[8rem] py-2 text-xs text-center cursor-pointer relative"
-            :class="activeTab === tab.key ? 'text-teal-700 font-bold bg-white rounded-tl-md transition-all duration-150 ease-in-out rounded-tr-md shadow rounded-b-0' : 'text-gray-500'">
+        <div class="grid grid-cols-6 gap-1 pr-4">
+          <button
+            v-for="tab in INCOMING_TABS"
+            :key="tab.key"
+            @click="switchTab(tab.key as IncomingTab)"
+            :class="[
+              'px-4 py-2 text-xs font-medium rounded-t-lg transition-colors',
+              activeTab === tab.key
+                ? 'bg-teal-700 text-white'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            ]"
+          >
             {{ tab.label }}
-            <span v-if="counts[tab.key] > 0"
-              class="absolute right-2 inline-flex items-center justify-center w-4 h-4 text-[10px] font-bold rounded-full"
-              :class="tab.key === 'overdue' ? 'bg-red-500 text-white' : 'bg-teal-600 text-white'">
+            <span
+              v-if="counts[tab.key] > 0"
+              class="ml-1.5 px-1.5 py-0.5 text-[10px] rounded-full"
+              :class="[
+                activeTab === tab.key ? 'bg-teal-600' : 'bg-gray-200',
+                tab.key === 'overdue' && activeTab !== tab.key ? 'bg-red-500 text-white' : ''
+              ]"
+            >
               {{ counts[tab.key] > 99 ? '99+' : counts[tab.key] }}
             </span>
-          </div>
-          <div class="absolute bottom-0 h-1 transition-all duration-300 bg-amber-500 rounded-t-md"
-            :style="indicatorStyle" />
+          </button>
         </div>
       </div>
 
@@ -272,7 +269,7 @@ const hasNextPage = computed(() => (pagination.value?.current_page ?? 1) < (pagi
         <!-- Rows -->
         <table v-else class="w-full">
           <tbody class="divide-y divide-gray-200">
-            <tr v-for="doc in documents" :key="doc.id" class="hover:bg-gray-50 hover:cursor-pointer"
+            <tr v-for="doc in documents" :key="doc.id" class="transition-colors hover:bg-gray-50 hover:cursor-pointer"
               @click="$router.push({ name: 'view-document', params: { trxNo: doc.transaction_no } })">
               <!-- From -->
               <td width="15%" class="p-3 text-xs font-light text-gray-600 align-top">

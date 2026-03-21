@@ -21,7 +21,11 @@ class OfficeLibrary extends Model
         'isActive'
     ];
 
-    protected $primaryKey = 'document_no';
+    protected $casts = [
+        'isActive' => 'boolean',
+    ];
+
+    protected $primaryKey = 'id';
     public $incrementing = false;
     protected $keyType = 'string';
 

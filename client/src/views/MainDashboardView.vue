@@ -1,494 +1,192 @@
 <script setup lang="ts">
-import ScrollableContainer from "@/components/ScrollableContainer.vue";
-import { useExpandableTextArray } from "@/composables/useExpandableTextArray";
-import { useAuthStore } from "@/stores/auth";
-import { generateUUID } from "@/utils/generateUUID";
-import { getUuid } from "pdfjs-dist";
-import { ref } from "vue";
+import ScrollableContainer from '@/components/ScrollableContainer.vue'
+import ActivityFeedWidget from '@/components/dashboard/ActivityFeedWidget.vue'
+import ForActionWidget from '@/components/dashboard/ForActionWidget.vue'
+import MyOutgoingWidget from '@/components/dashboard/MyOutgoingWidget.vue'
+import OverdueWidget from '@/components/dashboard/OverdueWidget.vue'
+import PendingReleaseWidget from '@/components/dashboard/PendingReleaseWidget.vue'
+import QuickStatsWidget from '@/components/dashboard/QuickStatsWidget.vue'
+import SystemHealthWidget from '@/components/dashboard/SystemHealthWidget.vue'
+import TeamPerformanceWidget from '@/components/dashboard/TeamPerformanceWidget.vue'
+import CloseDocumentModal from '@/components/view-document/CloseDocumentModal.vue'
+import ReceiveModal from '@/components/view-document/ReceiveModal.vue'
+import { useDashboard } from '@/composables/useDashboard'
+import { useAuthStore } from '@/stores/auth'
+import { computed, ref, watch, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 
-const auth = useAuthStore();
+// Debug logging
+console.log('🚀 MainDashboardView script executing')
+onMounted(() => console.log('✅ MainDashboardView mounted'))
 
-const user = {
-  name: auth.user?.username || "John Dev",
-  email: auth.user?.email || "john@example.com",
-  avatarUrl: "", // Add avatar logic if you have one
-};
+const authStore = useAuthStore()
+const router = useRouter()
 
-const documentNumber = ref(null);
+const {
+    forAction,
+    overdue,
+    drafts,
+    outgoing,
+    stats,
+    activity,
+    team,
+    system,
+    isLoading,
+    selectedPeriod,
+    refresh,
+    refreshStats,
+} = useDashboard()
 
-const announcements = [
-  {
-    id: generateUUID(),
-    title: "Database Migration",
-    content:
-      "The ICTS-SysADD Developer team will have a scheduled database migration for Trading Post Commodity Volume Watch (TPCVW). The mentioned system will not be accessible during this period. January 1-2, 2024",
-    audience_type: "Public",
-    date_posted: "July 30, 2025",
-    expiration: "1 Year",
-    isActive: true,
-  },
-  {
-    id: generateUUID(),
-    title: "Systen Maintenance",
-    content:
-      "Bantay Presyo Monitoring System (BPMS) will have a scheduled maintenance effective December 25-26, 2023",
-    audience_type: "Public",
-    date_posted: "June 30, 2025",
-    expiration: "1 Year",
-    isActive: true,
-  },
-  {
-    id: generateUUID(),
-    title: "Server Update",
-    content:
-      "The ICTS Team will be having a server maintenance and update. The following systems (AFMIS, BPMS, TPCVW) will not be available during this period.",
-    audience_type: "Public",
-    date_posted: "June 30, 2025",
-    expiration: "1 Year",
-    isActive: true,
-  },
-];
+// ── Role checks ────────────────────────────────────────────────────────────────
 
-const disseminatedDocuments = [
-  {
-    id: generateUUID(),
-    documentNumber: "DA-CO-ICTS-ORS20240906-00190",
-    documentType: "Obligation Request and Status",
-    subject:
-      "PAL-TO/ORS amounting to P40,564.00, to obligate payment of plane tickets for the following SysADD Personnel, Mla-CDO-Mla, July 21-25, 2025, to attend and participate in the Harmonization and Updates on the Human Resource Operations and Management in the Department of Agriculture: 1. Mark Harris Jamilan 2. Teresita Cruz 3. Charmaine Ellyn Resco; and 4. John Patrick Lachica",
-    from: "Systems Application Development Division",
-    date_created: "July 30, 2025",
-  },
-  {
-    id: generateUUID(),
-    documentNumber: "DA-CO-ICTS-ORS20240906-00191",
-    documentType: "Obligation Request and Status",
-    subject:
-      "PAL-TO/ORS amounting to P40,564.00, to obligate payment of plane tickets for the following SysADD Personnel, Mla-CDO-Mla, July 21-25, 2025, to attend and participate in the Harmonization and Updates on the Human Resource Operations and Management in the Department of Agriculture: 1. Mark Harris Jamilan 2. Teresita Cruz 3. Charmaine Ellyn Resco; and 4. John Patrick Lachica",
-    from: "Systems Application Development Division",
-    date_created: "July 30, 2025",
-  },
-  {
-    id: generateUUID(),
-    documentNumber: "DA-CO-ICTS-ORS20240906-00192",
-    documentType: "Obligation Request and Status",
-    subject:
-      "PAL-TO/ORS amounting to P40,564.00, to obligate payment of plane tickets for the following SysADD Personnel, Mla-CDO-Mla, July 21-25, 2025, to attend and participate in the Harmonization and Updates on the Human Resource Operations and Management in the Department of Agriculture: 1. Mark Harris Jamilan 2. Teresita Cruz 3. Charmaine Ellyn Resco; and 4. John Patrick Lachica",
-    from: "Systems Application Development Division",
-    date_created: "July 30, 2025",
-  },
-  {
-    id: generateUUID(),
-    documentNumber: "DA-CO-ICTS-ORS20240906-00193",
-    documentType: "Obligation Request and Status",
-    from: "Systems Application Development Division",
-    subject:
-      "PAL-TO/ORS amounting to P40,564.00, to obligate payment of plane tickets for the following SysADD Personnel, Mla-CDO-Mla, July 21-25, 2025, to attend and participate in the Harmonization and Updates on the Human Resource Operations and Management in the Department of Agriculture: 1. Mark Harris Jamilan 2. Teresita Cruz 3. Charmaine Ellyn Resco; and 4. John Patrick Lachica",
-    date_created: "July 30, 2025",
-  },
-];
+const userRole = computed(() => authStore.user?.role ?? 'user')
+const isTeamVisible = computed(() => ['superior', 'admin'].includes(userRole.value))
+const isAdmin = computed(() => userRole.value === 'admin')
 
-const { maxLength, isExpanded, toggleExpanded, getDisplayText } =
-  useExpandableTextArray();
+// ── Header stats (derived from stats endpoint) ─────────────────────────────────
 
-const incomingDocuments = [
-  {
-    id: generateUUID(),
-    documentNumber: "DA-CO-ICTS-ORS20240906-00191",
-    subject:
-      "PAL-TO/ORS amounting to P40,564.00, to obligate payment of plane tickets for the following SysADD Personnel, Mla-CDO-Mla, July 21-25, 2025, to attend and participate in the Harmonization and Updates on the Human Resource Operations and Management in the Department of Agriculture: 1. Mark Harris Jamilan 2. Teresita Cruz 3. Charmaine Ellyn Resco; and 4. John Patrick Lachica",
-    documentType: "Obligation Request and Status",
-    from: "Systems Application Development Division",
-    date_sent: "10:00 AM",
-  },
-  {
-    id: generateUUID(),
-    documentNumber: "DA-CO-ICTS-ORS20240906-00191",
-    subject:
-      "PAL-TO/ORS amounting to P40,564.00, to obligate payment of plane tickets for the following SysADD Personnel, Mla-CDO-Mla, July 21-25, 2025, to attend and participate in the Harmonization and Updates on the Human Resource Operations and Management in the Department of Agriculture: 1. Mark Harris Jamilan 2. Teresita Cruz 3. Charmaine Ellyn Resco; and 4. John Patrick Lachica",
-    documentType: "Obligation Request and Status",
-    from: "Systems Application Development Division",
-    date_sent: "10:00 AM",
-  },
-  {
-    id: generateUUID(),
-    documentNumber: "DA-CO-ICTS-ORS20240906-00191",
-    subject:
-      "PAL-TO/ORS amounting to P40,564.00, to obligate payment of plane tickets for the following SysADD Personnel, Mla-CDO-Mla, July 21-25, 2025, to attend and participate in the Harmonization and Updates on the Human Resource Operations and Management in the Department of Agriculture: 1. Mark Harris Jamilan 2. Teresita Cruz 3. Charmaine Ellyn Resco; and 4. John Patrick Lachica",
-    documentType: "Obligation Request and Status",
-    from: "Systems Application Development Division",
-    date_sent: "10:00 AM",
-  },
-  {
-    id: generateUUID(),
-    documentNumber: "DA-CO-ICTS-ORS20240906-00191",
-    subject:
-      "PAL-TO/ORS amounting to P40,564.00, to obligate payment of plane tickets for the following SysADD Personnel, Mla-CDO-Mla, July 21-25, 2025, to attend and participate in the Harmonization and Updates on the Human Resource Operations and Management in the Department of Agriculture: 1. Mark Harris Jamilan 2. Teresita Cruz 3. Charmaine Ellyn Resco; and 4. John Patrick Lachica",
-    documentType: "Obligation Request and Status",
-    from: "Systems Application Development Division",
-    date_sent: "10:00 AM",
-  },
-  {
-    id: generateUUID(),
-    documentNumber: "DA-CO-ICTS-ORS20240906-00191",
-    subject:
-      "PAL-TO/ORS amounting to P40,564.00, to obligate payment of plane tickets for the following SysADD Personnel, Mla-CDO-Mla, July 21-25, 2025, to attend and participate in the Harmonization and Updates on the Human Resource Operations and Management in the Department of Agriculture: 1. Mark Harris Jamilan 2. Teresita Cruz 3. Charmaine Ellyn Resco; and 4. John Patrick Lachica",
-    documentType: "Obligation Request and Status",
-    from: "Systems Application Development Division",
-    date_sent: "10:00 AM",
-  },
-  {
-    id: generateUUID(),
-    documentNumber: "DA-CO-ICTS-ORS20240906-00191",
-    subject:
-      "PAL-TO/ORS amounting to P40,564.00, to obligate payment of plane tickets for the following SysADD Personnel, Mla-CDO-Mla, July 21-25, 2025, to attend and participate in the Harmonization and Updates on the Human Resource Operations and Management in the Department of Agriculture: 1. Mark Harris Jamilan 2. Teresita Cruz 3. Charmaine Ellyn Resco; and 4. John Patrick Lachica",
-    documentType: "Obligation Request and Status",
-    from: "Systems Application Development Division",
-    date_sent: "10:00 AM",
-  },
-  {
-    id: generateUUID(),
-    documentNumber: "DA-CO-ICTS-ORS20240906-00191",
-    subject:
-      "PAL-TO/ORS amounting to P40,564.00, to obligate payment of plane tickets for the following SysADD Personnel, Mla-CDO-Mla, July 21-25, 2025, to attend and participate in the Harmonization and Updates on the Human Resource Operations and Management in the Department of Agriculture: 1. Mark Harris Jamilan 2. Teresita Cruz 3. Charmaine Ellyn Resco; and 4. John Patrick Lachica",
-    documentType: "Obligation Request and Status",
-    from: "Systems Application Development Division",
-    date_sent: "10:00 AM",
-  },
-  {
-    id: generateUUID(),
-    documentNumber: "DA-CO-ICTS-ORS20240906-00191",
-    subject:
-      "PAL-TO/ORS amounting to P40,564.00, to obligate payment of plane tickets for the following SysADD Personnel, Mla-CDO-Mla, July 21-25, 2025, to attend and participate in the Harmonization and Updates on the Human Resource Operations and Management in the Department of Agriculture: 1. Mark Harris Jamilan 2. Teresita Cruz 3. Charmaine Ellyn Resco; and 4. John Patrick Lachica",
-    documentType: "Obligation Request and Status",
-    from: "Systems Application Development Division",
-    date_sent: "10:00 AM",
-  },
-  {
-    id: generateUUID(),
-    documentNumber: "DA-CO-ICTS-ORS20240906-00191",
-    subject:
-      "PAL-TO/ORS amounting to P40,564.00, to obligate payment of plane tickets for the following SysADD Personnel, Mla-CDO-Mla, July 21-25, 2025, to attend and participate in the Harmonization and Updates on the Human Resource Operations and Management in the Department of Agriculture: 1. Mark Harris Jamilan 2. Teresita Cruz 3. Charmaine Ellyn Resco; and 4. John Patrick Lachica",
-    documentType: "Obligation Request and Status",
-    from: "Systems Application Development Division",
-    date_sent: "10:00 AM",
-  },
-  {
-    id: generateUUID(),
-    documentNumber: "DA-CO-ICTS-ORS20240906-00191",
-    subject:
-      "PAL-TO/ORS amounting to P40,564.00, to obligate payment of plane tickets for the following SysADD Personnel, Mla-CDO-Mla, July 21-25, 2025, to attend and participate in the Harmonization and Updates on the Human Resource Operations and Management in the Department of Agriculture: 1. Mark Harris Jamilan 2. Teresita Cruz 3. Charmaine Ellyn Resco; and 4. John Patrick Lachica",
-    documentType: "Obligation Request and Status",
-    from: "Systems Application Development Division",
-    date_sent: "10:00 AM",
-  },
-];
+const headerStats = computed(() => ({
+    overdue: stats.value?.current.overdue ?? 0,
+    forAction: stats.value?.current.for_action ?? 0,
+    sent: stats.value?.current.sent ?? 0,
+    completed: stats.value?.current.completed ?? 0,
+}))
 
-const outgoingDocuments = [
-  {
-    id: generateUUID(),
-    documentNumber: "DA-CO-ICTS-ORS20240906-00191",
-    subject:
-      "PAL-TO/ORS amounting to P40,564.00, to obligate payment of plane tickets for the following SysADD Personnel, Mla-CDO-Mla, July 21-25, 2025, to attend and participate in the Harmonization and Updates on the Human Resource Operations and Management in the Department of Agriculture: 1. Mark Harris Jamilan 2. Teresita Cruz 3. Charmaine Ellyn Resco; and 4. John Patrick Lachica",
-    documentType: "Obligation Request and Status",
-    current_destination: "Systems Application Development Division",
-    date_sent: "10:00 AM",
-  },
-  {
-    id: generateUUID(),
-    documentNumber: "DA-CO-ICTS-ORS20240906-00191",
-    subject:
-      "PAL-TO/ORS amounting to P40,564.00, to obligate payment of plane tickets for the following SysADD Personnel, Mla-CDO-Mla, July 21-25, 2025, to attend and participate in the Harmonization and Updates on the Human Resource Operations and Management in the Department of Agriculture: 1. Mark Harris Jamilan 2. Teresita Cruz 3. Charmaine Ellyn Resco; and 4. John Patrick Lachica",
-    documentType: "Obligation Request and Status",
-    current_destination: "Systems Application Development Division",
-    date_sent: "10:00 AM",
-  },
-  {
-    id: generateUUID(),
-    documentNumber: "DA-CO-ICTS-ORS20240906-00191",
-    subject:
-      "PAL-TO/ORS amounting to P40,564.00, to obligate payment of plane tickets for the following SysADD Personnel, Mla-CDO-Mla, July 21-25, 2025, to attend and participate in the Harmonization and Updates on the Human Resource Operations and Management in the Department of Agriculture: 1. Mark Harris Jamilan 2. Teresita Cruz 3. Charmaine Ellyn Resco; and 4. John Patrick Lachica",
-    documentType: "Obligation Request and Status",
-    current_destination: "Systems Application Development Division",
-    date_sent: "10:00 AM",
-  },
-  {
-    id: generateUUID(),
-    documentNumber: "DA-CO-ICTS-ORS20240906-00191",
-    subject:
-      "PAL-TO/ORS amounting to P40,564.00, to obligate payment of plane tickets for the following SysADD Personnel, Mla-CDO-Mla, July 21-25, 2025, to attend and participate in the Harmonization and Updates on the Human Resource Operations and Management in the Department of Agriculture: 1. Mark Harris Jamilan 2. Teresita Cruz 3. Charmaine Ellyn Resco; and 4. John Patrick Lachica",
-    documentType: "Obligation Request and Status",
-    current_destination: "Systems Application Development Division",
-    date_sent: "10:00 AM",
-  },
-  {
-    id: generateUUID(),
-    documentNumber: "DA-CO-ICTS-ORS20240906-00191",
-    subject:
-      "PAL-TO/ORS amounting to P40,564.00, to obligate payment of plane tickets for the following SysADD Personnel, Mla-CDO-Mla, July 21-25, 2025, to attend and participate in the Harmonization and Updates on the Human Resource Operations and Management in the Department of Agriculture: 1. Mark Harris Jamilan 2. Teresita Cruz 3. Charmaine Ellyn Resco; and 4. John Patrick Lachica",
-    documentType: "Obligation Request and Status",
-    current_destination: "Systems Application Development Division",
-    date_sent: "10:00 AM",
-  },
-];
+// ── Receive modal state ────────────────────────────────────────────────────────
+
+const receiveOpen = ref(false)
+const receiveTrxNo = ref('')
+
+function openReceive(trxNo: string) {
+    receiveTrxNo.value = trxNo
+    receiveOpen.value = true
+}
+
+function toggleReceiveModal() {
+    receiveOpen.value = !receiveOpen.value
+    if (!receiveOpen.value) receiveTrxNo.value = ''
+}
+
+function onReceived() {
+    receiveOpen.value = false
+    receiveTrxNo.value = ''
+    refresh()
+}
+
+// ── Close modal state ──────────────────────────────────────────────────────────
+
+const closeOpen = ref(false)
+const closeDocNo = ref('')
+
+function openClose(docNo: string) {
+    closeDocNo.value = docNo
+    closeOpen.value = true
+}
+
+function toggleCloseModal() {
+    closeOpen.value = !closeOpen.value
+    if (!closeOpen.value) closeDocNo.value = ''
+}
+
+function onClosed() {
+    closeOpen.value = false
+    closeDocNo.value = ''
+    refresh()
+}
+
+// ── Release: navigate to ViewDocument (full form required for initial release) ─
+
+function handleRelease(trxNo: string) {
+    router.push({ name: 'view-document', params: { trxNo } })
+}
+
+// ── Refresh stats when period changes ─────────────────────────────────────────
+
+watch(selectedPeriod, () => refreshStats())
 </script>
+
 <template>
-  <ScrollableContainer>
-    <!-- Header Stats Card -->
-    <div
-      class="grid grid-cols-1 sm:grid-cols-12 gap-5 p-4  sm:h-[150px] w-full rounded-xl bg-gradient-to-r from-teal-900 to-green-700">
-      <!-- Welcome Text and Receive Input -->
-      <div class="flex flex-col justify-between col-span-1 sm:col-span-4">
-        <h1 class="flex text-2xl font-bold text-lime-500">
-          WELCOME! <span class="ml-2 text-white"> {{ user.name }} </span>
-        </h1>
 
-        <div class="hidden sm:block">
-          <h1 class="mb-2 text-gray-300">Receive a document</h1>
-          <input v-model="documentNumber" type="text" placeholder="Enter Document No"
-            class="w-full p-2 text-xs transition bg-white border border-gray-200 rounded-full shadow-inner focus:outline-none focus:ring-2 focus:ring-lime-600" />
+    <ScrollableContainer>
+        <!-- ── Header ─────────────────────────────────────────────────────────── -->
+        <div class="w-full">
+            <h1 class="text-xl font-semibold text-gray-800">Dashboard</h1>
+            <p class="text-sm text-gray-500 mt-0.5">Saved routing configurations to speed up document creation.</p>
         </div>
-      </div>
-
-      <!-- Stats Cards -->
-      <div class="grid grid-cols-2 col-span-1 gap-4 sm:col-span-8 sm:grid-cols-4">
-        <!-- Received Stats -->
-        <div class="flex flex-col justify-between p-4 shadow-2xl bg-white/20 rounded-xl">
-          <!-- Icon / Text -->
-          <div class="font-light text-gray-100 ">
-            Overdue
-          </div>
-          <!-- Count -->
-          <div class="text-2xl font-bold text-white">5,000</div>
-        </div>
-        <!-- Released Stats -->
-        <div class="flex flex-col justify-between p-4 shadow-2xl bg-white/20 rounded-xl">
-          <!-- Icon / Text -->
-          <div class="font-light text-gray-100 ">Today's Incoming</div>
-          <!-- Count -->
-          <div class="text-2xl font-bold text-white">5,000</div>
-        </div>
-        <!-- My Documents -->
-        <div class="flex flex-col justify-between p-4 shadow-2xl bg-white/20 rounded-xl">
-          <!-- Icon / Text -->
-          <div class="font-light text-gray-100 ">Processing</div>
-          <!-- Count -->
-          <div class="text-2xl font-bold text-white">5,000</div>
-        </div>
-        <!-- Archived -->
-        <div class="flex flex-col justify-between p-4 shadow-2xl bg-white/20 rounded-xl">
-          <!-- Icon / Text -->
-          <div class="font-light text-gray-100 ">Archived</div>
-          <!-- Count -->
-          <div class="text-2xl font-bold text-white">5,000</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="grid w-full grid-cols-12 gap-5">
-      <div class="flex flex-col col-span-12 sm:col-span-9">
-        <!-- Card Incoming -->
-        <div class="w-full mt-5 bg-white shadow-lg rounded-xl overflow-clip">
-          <!-- header -->
-          <div class="flex justify-between w-full p-4 shadow items-baseline-last text-lime-600">
-            <h1 class="font-bold">Recent Incoming</h1>
-            <h1 class="font-bold">{{ incomingDocuments?.length || 0 }}</h1>
-          </div>
-          <!-- <hr class="text-gray-300 border-1" /> -->
-          <!-- table -->
-          <table class="w-full">
-            <thead>
-              <tr class="sticky bg-gray-100">
-                <td width="15%" class="p-2 text-xs font-semibold">
-                  From
-                </td>
-                <td width="67%" class="p-2 text-xs font-semibold">
-                  Subject
-                </td>
-                <td width="10%" class="p-2 text-xs font-semibold text-right">
-                  Sent
-                </td>
-              </tr>
-            </thead>
-          </table>
-          <div class="h-[350px] overflow-auto">
-            <table class="w-full">
-              <!-- <thead>
-                <tr class="sticky bg-gray-100">
-                  <td
-                    width="25%"
-                    class="p-2 text-xs font-semibold"
-                  >
-                    Document Number
-                  </td>
-                  <td
-                    width="35%"
-                    class="p-2 text-xs font-semibold"
-                  >
-                    Subject
-                  </td>
-                  <td
-                    width="35%"
-                    class="p-2 text-xs font-semibold"
-                  >
-                    From
-                  </td>
-                </tr>
-              </thead> -->
-              <tbody class="divide-y divide-gray-200">
-                <tr v-for="incomingDoc in incomingDocuments" class="hover:bg-gray-100 hover:cursor-pointer" @click="
-                  $router.push({
-                    name: 'view-document',
-                    params: { trxNo: incomingDoc.documentNumber },
-                  })
-                  ">
-                  <td width="15%" class="p-3 text-xs font-light align-top">
-                    <div>
-                      {{ incomingDoc.from }}
-                    </div>
-                  </td>
-                  <td width="67%" class="p-3 align-top">
-                    <div class="text-xs font-normal">
-                      <span class="font-bold">
-                        {{ incomingDoc.documentType }}</span>
-                      -
-                      {{ getDisplayText(incomingDoc.id, incomingDoc.subject) }}
-                      <span v-if="incomingDoc.subject.length > maxLength"
-                        class="ml-1 text-xs text-teal-700 cursor-pointer hover:underline"
-                        @click="toggleExpanded(incomingDoc.id)">
-                        {{
-                          isExpanded(incomingDoc.id) ? "See less" : "See more"
-                        }}
-                      </span>
-                    </div>
-                  </td>
-                  <td width="10%" class="p-3 text-xs font-light text-right align-top">
-                    {{ incomingDoc.date_sent }}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Card Outgoing -->
-        <div class="w-full mt-5 bg-white shadow-lg rounded-xl">
-          <!-- header -->
-          <div class="flex justify-between w-full p-4 items-baseline-last text-amber-600">
-            <h1 class="font-bold">Recent Outgoing</h1>
-            <h1 class="font-bold">{{ outgoingDocuments?.length || 0 }}</h1>
-          </div>
-          <!-- table -->
-          <table class="w-full">
-            <thead>
-              <tr class="bg-gray-100">
-                <td width="57%" class="p-2 text-xs font-semibold">
-                  Subject
-                </td>
-                <td width="15%" class="p-2 text-xs font-semibold">
-                  Current Destination
-                </td>
-                <td width="10%" class="p-2 text-xs font-semibold text-right">
-                  Sent
-                </td>
-              </tr>
-            </thead>
-          </table>
-          <div class="h-[350px] overflow-auto">
-            <table class="w-full">
-              <tbody class="divide-y divide-gray-200">
-                <tr v-for="outgoingDoc in outgoingDocuments" class="hover:bg-gray-100 hover:cursor-pointer">
-                  <td width="57%" class="p-3 align-top">
-                    <div class="text-xs font-normal">
-                      <span class="font-bold">
-                        {{ outgoingDoc.documentType }}</span>
-                      -
-                      {{ getDisplayText(outgoingDoc.id, outgoingDoc.subject) }}
-                      <span v-if="outgoingDoc.subject.length > maxLength"
-                        class="text-xs text-teal-700 cursor-pointer hover:underline"
-                        @click="toggleExpanded(outgoingDoc.id)">
-                        {{
-                          isExpanded(outgoingDoc.id) ? "See less" : "See more"
-                        }}
-                      </span>
-                    </div>
-                  </td>
-                  <td width="15%" class="p-3 text-xs font-light align-top">
-                    <div>
-                      {{ outgoingDoc.current_destination }}
-                    </div>
-                  </td>
-
-                  <td width="10%" class="p-3 text-xs font-light text-right align-top">
-                    {{ outgoingDoc.date_sent }}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <div class="flex flex-col col-span-12 sm:mt-5 sm:col-span-3">
-        <!-- For Dissemination Card -->
-        <div class="p-2 bg-gray-100 border border-gray-300 rounded-xl">
-          <!-- header -->
-          <div class="flex items-center justify-between p-2 text-sm">
-            <h1 class="font-bold">Latest Disseminated Documents</h1>
-          </div>
-          <div class="h-[410px] rounded-lg overflow-auto">
-            <ul class="space-y-2 divide-y divide-gray-300">
-              <li v-for="doc in disseminatedDocuments" class="p-2">
-                <!-- <h1 class="text-sm font-semibold">{{ doc.documentNumber }}</h1> -->
-                <p class="mb-3 text-xs font-light">
-                  <span class="font-medium">From: </span> {{ doc.from }}
+        <div hidden
+            class="grid grid-cols-1 sm:grid-cols-12 gap-5 p-4 sm:h-[150px] w-full rounded-xl bg-gradient-to-r from-teal-900 to-teal-700">
+            <!-- Welcome block -->
+            <div class="flex flex-col justify-between col-span-1 sm:col-span-4">
+                <h1 class="flex text-2xl font-bold text-lime-500">
+                    WELCOME!
+                    <span class="ml-2 text-white">{{ authStore.user?.username || authStore.user?.name }}</span>
+                </h1>
+                <p class="hidden text-xs text-teal-200 sm:block">
+                    {{ authStore.user?.office_name }}
                 </p>
-                <h1 class="text-xs font-semibold">{{ doc.documentType }}</h1>
-                <p class="text-xs font-light">
-                  <span class="font-medium"> Subject:</span>
-                  {{ getDisplayText(doc.id, doc.subject) }}
-                  <span v-if="doc.subject.length > maxLength"
-                    class="ml-1 text-xs text-teal-700 cursor-pointer hover:underline" @click="toggleExpanded(doc.id)">
-                    {{ isExpanded(doc.id) ? "See less" : "See more" }}
-                  </span>
-                </p>
-                <div class="flex items-center justify-between pt-2">
-                  <span class="text-xs text-gray-400">{{
-                    doc.date_created
-                    }}</span>
-                  <button class="px-2 py-1 text-[10px] text-gray-400 border rounded-lg">
-                    View
-                  </button>
+            </div>
+
+            <!-- Quick stat cards (top line overview) -->
+            <div class="grid grid-cols-2 col-span-1 gap-4 sm:col-span-8 sm:grid-cols-4">
+                <div class="flex flex-col justify-between p-4 shadow-2xl bg-white/20 rounded-xl">
+                    <div class="text-sm font-light text-gray-100">Overdue</div>
+                    <div class="text-2xl font-bold text-red-300">{{ isLoading ? '—' : headerStats.overdue }}</div>
                 </div>
-              </li>
-              <li class="flex p-2">
-                <a href="#" class="mx-auto text-xs text-center text-gray-400">
-                  See All
-                </a>
-              </li>
-            </ul>
-          </div>
+                <div class="flex flex-col justify-between p-4 shadow-2xl bg-white/20 rounded-xl">
+                    <div class="text-sm font-light text-gray-100">For Action</div>
+                    <div class="text-2xl font-bold text-amber-300">{{ isLoading ? '—' : headerStats.forAction }}</div>
+                </div>
+                <div class="flex flex-col justify-between p-4 shadow-2xl bg-white/20 rounded-xl">
+                    <div class="text-sm font-light text-gray-100">Sent</div>
+                    <div class="text-2xl font-bold text-white">{{ isLoading ? '—' : headerStats.sent }}</div>
+                </div>
+                <div class="flex flex-col justify-between p-4 shadow-2xl bg-white/20 rounded-xl">
+                    <div class="text-sm font-light text-gray-100">Completed</div>
+                    <div class="text-2xl font-bold text-lime-300">{{ isLoading ? '—' : headerStats.completed }}</div>
+                </div>
+            </div>
         </div>
 
-        <!-- Announcements Card -->
-        <div class="p-2 mt-4 bg-gray-300 rounded-xl">
-          <!-- header -->
-          <div class="flex items-center justify-between p-2 text-sm">
-            <h1 class="font-bold">Announcements</h1>
-            <h1 class="font-light text-gray-400">All</h1>
-          </div>
-          <div class="h-[300px] rounded-lg overflow-auto">
-            <ul class="space-y-2 rounded-lg">
-              <li v-for="post in announcements" class="p-2 bg-gray-100 rounded-md shadow-md">
-                <h1 class="text-xs font-semibold">{{ post.title }}</h1>
-                <p class="mt-2 text-xs font-light text-gray-600">
-                  {{ post.content }}
-                </p>
-              </li>
-            </ul>
-          </div>
+        <!-- ── Widget stack ───────────────────────────────────────────────────── -->
+        <div class="grid w-full grid-cols-12 gap-5 mt-5">
+
+            <!-- 5. QUICK STATS -->
+            <QuickStatsWidget class="col-span-12" :stats="stats" :loading="isLoading" v-model:period="selectedPeriod" />
+
+            <!-- 2. FOR ACTION -->
+            <ForActionWidget class="col-span-6" :data="forAction" :loading="isLoading" @receive="openReceive" />
+
+            <div class="grid col-span-6 gap-5 gird-cols-12">
+                <!-- 1. OVERDUE (only shown if there are overdue items or loading) -->
+                <OverdueWidget class="col-span-6" :data="overdue" :loading="isLoading" />
+
+                <!-- 3. PENDING RELEASE -->
+                <PendingReleaseWidget class="col-span-6" :data="drafts" :loading="isLoading" @release="handleRelease" />
+            </div>
+
+            <!-- 6. ACTIVITY FEED -->
+            <ActivityFeedWidget class="col-span-4" :data="activity" :loading="isLoading" />
+
+            <!-- 4. MY OUTGOING -->
+            <MyOutgoingWidget class="col-span-8" :data="outgoing" :loading="isLoading" @close="openClose" />
+
+            <!-- 7. TEAM PERFORMANCE (Superior + Admin only) -->
+            <TeamPerformanceWidget class="col-span-12" v-if="isTeamVisible" :data="team" :loading="isLoading" />
+
+            <!-- 8. SYSTEM HEALTH (Admin only) -->
+            <SystemHealthWidget class="col-span-12" v-if="isAdmin" :data="system" :loading="isLoading" />
+
         </div>
-      </div>
-    </div>
-  </ScrollableContainer>
+
+        <!-- ── Quick action modals ─────────────────────────────────────────────── -->
+
+        <!-- Receive modal -->
+        <ReceiveModal v-if="receiveOpen && receiveTrxNo" :isOpen="receiveOpen" :toggleReceiveModal="toggleReceiveModal"
+            :trxNo="receiveTrxNo" @received="onReceived" />
+
+        <!-- Close document modal -->
+        <CloseDocumentModal v-if="closeOpen && closeDocNo" :isOpen="closeOpen" :toggleModal="toggleCloseModal"
+            :docNo="closeDocNo" @closed="onClosed" />
+
+    </ScrollableContainer>
 </template>

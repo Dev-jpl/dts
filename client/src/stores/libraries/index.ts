@@ -28,16 +28,14 @@ export const useLibraryStore = defineStore('library', {
         async loadActionLibrary() {
             this.actionLibrary.isLoading = true;
 
-            setTimeout(async () => {
-                try {
-                    const actions = await fetchActions();
-                    this.actionLibrary.data = actions;
-                } catch (err) {
-                    this.actionLibrary.hasError = true;
-                } finally {
-                    this.actionLibrary.isLoading = false;
-                }
-            }, 2000); // Simulate a delay for loading
+            try {
+                const actions = await fetchActions();
+                this.actionLibrary.data = actions;
+            } catch (err) {
+                this.actionLibrary.hasError = true;
+            } finally {
+                this.actionLibrary.isLoading = false;
+            }
         },
 
 

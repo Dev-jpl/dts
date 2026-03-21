@@ -1,6 +1,9 @@
 # DTS — Document Tracking System
+
 # Claude Code Master Context File
+
 # Read this fully before every task.
+
 # Last updated: Chapter 1 + Chapter 2 complete
 
 ---
@@ -50,6 +53,7 @@
 ## Tech Stack
 
 ### Backend
+
 - Laravel 12, PHP 8.2+
 - Laravel Passport (OAuth2 — `auth:api` guard on ALL protected routes)
 - PostgreSQL 15+
@@ -59,6 +63,7 @@
 - simplesoftwareio/simple-qrcode (QR code generation)
 
 ### Frontend
+
 - Vue 3 + TypeScript + Vite
 - Pinia (stores: auth, document, libraries, dashboard, reports, search, notifications)
 - Vue Router 4
@@ -73,19 +78,21 @@
 ## Implementation Status
 
 ### Chapter 1 — Transaction Flow
+
 ```
-Phase 1 — DB Updates                ⬜ Pending
-Phase 2 — Core Services             ⬜ Pending
-Phase 3 — Backend Actions           ⬜ Pending
-Phase 4 — Frontend                  ⬜ Pending
+Phase 1 — DB Updates                ✅ Done
+Phase 2 — Core Services             ✅ Done
+Phase 3 — Backend Actions           ✅ Done
+Phase 4 — Frontend                  ✅ Done
 ```
 
 ### Chapter 2 — Extended Modules
+
 ```
-Module 1 — Dashboard                ⬜ Pending
-Module 2 — Reports                  ⬜ Pending
-Module 3 — Advanced Search          ⬜ Pending
-Module 4 — Templating               ⬜ Pending
+Module 1 — Dashboard                ✅ Done
+Module 2 — Reports                  ✅ Done
+Module 3 — Advanced Search          ✅ Done
+Module 4 — Templating               ✅ Done
 Module 5 — Notifications Center     ⬜ Pending
 Module 6 — User & Office Settings   ⬜ Pending
 Module 7 — Signatory Management     ⬜ Pending
@@ -237,6 +244,7 @@ PATCH  /api/documents/{docNo}/signatories/reorder
 ## Database — Current State vs Target
 
 ### documents
+
 ```
 CURRENT status enum:  Draft | Processing | Archived       ← WRONG
 TARGET  status enum:  Draft | Active | Returned | Completed | Closed
@@ -247,6 +255,7 @@ ADD fields:
 ```
 
 ### document_transactions
+
 ```
 CURRENT status enum:  Draft | Processing | Completed
 TARGET  status enum:  Draft | Processing | Returned | Completed
@@ -258,6 +267,7 @@ ADD fields:
 ```
 
 ### document_transaction_logs
+
 ```
 ADD to status enum:
   Done | Closed | Routing Halted | Document Revised |
@@ -268,6 +278,7 @@ ADD field:
 ```
 
 ### action_library
+
 ```
 ADD fields:
   type                   enum: FA|FI
@@ -278,12 +289,14 @@ ADD fields:
 ```
 
 ### document_type_library
+
 ```
 ADD fields:
   default_urgency_level  enum: Urgent|High|Normal|Routine nullable
 ```
 
 ### document_signatories
+
 ```
 ADD fields (if not present):
   position   varchar(150) nullable
@@ -293,12 +306,14 @@ ADD fields (if not present):
 ```
 
 ### CREATE — Chapter 1
+
 ```
 document_versions
 document_notes          ← replaces document_comments
 ```
 
 ### CREATE — Chapter 2
+
 ```
 user_saved_searches
 document_templates
@@ -310,6 +325,7 @@ signatory_library
 ```
 
 ### DEPRECATE (keep rows, stop inserting)
+
 ```
 document_comments  ← replaced by document_notes
 document_logs      ← replaced by document_transaction_logs
@@ -320,6 +336,7 @@ document_logs      ← replaced by document_transaction_logs
 ## Full Schema Reference — New Tables
 
 ### document_versions
+
 ```sql
 id                   bigint PK auto-increment
 document_no          varchar FK → documents
@@ -337,6 +354,7 @@ changed_at           timestamp
 ```
 
 ### document_notes
+
 ```sql
 id               bigint PK auto-increment
 document_no      varchar FK → documents
@@ -351,6 +369,7 @@ updated_at       timestamp
 ```
 
 ### user_saved_searches
+
 ```sql
 id           bigint PK auto-increment
 user_id      uuid FK → users ON DELETE CASCADE
@@ -362,6 +381,7 @@ updated_at   timestamp
 ```
 
 ### document_templates
+
 ```sql
 id                bigint PK auto-increment
 name              varchar(150)
@@ -384,6 +404,7 @@ updated_at        timestamp
 ```
 
 ### document_template_recipients
+
 ```sql
 id              bigint PK auto-increment
 template_id     bigint FK → document_templates ON DELETE CASCADE
@@ -396,6 +417,7 @@ updated_at      timestamp
 ```
 
 ### user_notification_preferences
+
 ```sql
 id          bigint PK auto-increment
 user_id     uuid FK → users ON DELETE CASCADE
@@ -408,6 +430,7 @@ UNIQUE(user_id, event_type)
 ```
 
 ### user_preferences
+
 ```sql
 id                  bigint PK auto-increment
 user_id             uuid UNIQUE FK → users ON DELETE CASCADE
@@ -420,6 +443,7 @@ updated_at          timestamp
 ```
 
 ### signatory_library
+
 ```sql
 id           bigint PK auto-increment
 name         varchar(150)
@@ -464,20 +488,21 @@ FI (For Information) — Receive IS the terminal action:
 ```
 
 ### Action Library Full Reference
-| Action | type | reply_is_terminal | requires_proof | default_urgency |
-|--------|------|-------------------|----------------|-----------------|
-| Appropriate Action | FA | false | true | null |
-| Urgent Action | FA | false | true | Urgent (locked) |
-| Dissemination of Information | FI | false | false | null |
-| Comment/Reaction/Response | FA | true | false | null |
-| Compliance/Implementation | FA | false | true | null |
-| Endorsement/Recommendation | FA | false | true | null |
-| Coding/Deposit/Preparation | FA | false | true | null |
-| Follow Up | FA | false | false | null |
-| Investigation/Verification | FA | false | true | null |
-| Your Information | FI | false | false | null |
-| Draft of Reply | FA | true | false | null |
-| Approval | FA | false | true | null |
+
+| Action                       | type | reply_is_terminal | requires_proof | default_urgency |
+| ---------------------------- | ---- | ----------------- | -------------- | --------------- |
+| Appropriate Action           | FA   | false             | true           | null            |
+| Urgent Action                | FA   | false             | true           | Urgent (locked) |
+| Dissemination of Information | FI   | false             | false          | null            |
+| Comment/Reaction/Response    | FA   | true              | false          | null            |
+| Compliance/Implementation    | FA   | false             | true           | null            |
+| Endorsement/Recommendation   | FA   | false             | true           | null            |
+| Coding/Deposit/Preparation   | FA   | false             | true           | null            |
+| Follow Up                    | FA   | false             | false          | null            |
+| Investigation/Verification   | FA   | false             | true           | null            |
+| Your Information             | FI   | false             | false          | null            |
+| Draft of Reply               | FA   | true              | false          | null            |
+| Approval                     | FA   | false             | true           | null            |
 
 ---
 
@@ -505,6 +530,7 @@ Priority order for due date calculation:
 ## Recipient Rules
 
 ### isActive Lifecycle
+
 ```
 Created on release                    → true
 Receives                              → stays true (no change)
@@ -522,6 +548,7 @@ Sequential FI — after Receive         → false (auto-advances to next)
 ```
 
 ### CC/BCC Permissions
+
 ```
                            Default  CC     BCC
 Can Receive                ✅       ✅     ✅
@@ -543,6 +570,7 @@ Notes visible to all       ✅       ✅     ✅
 ## TransactionStatusService
 
 ### NEVER manually set status = Completed
+
 ### ALWAYS call TransactionStatusService::evaluate($transactionNo)
 
 ```
@@ -563,6 +591,7 @@ Reply → new document_no → independent — does NOT affect original document
 ```
 
 ### Routing Completion
+
 ```
 Single:
   FA → Completed on first terminal action
@@ -640,21 +669,21 @@ return response()->json([
 
 ## All Actions — Quick Reference
 
-| Action | Route | Key Guard | New TRX |
-|--------|-------|-----------|---------|
-| Initial Release | POST /{trxNo}/release | status=Draft, origin only | No |
-| Subsequent Release | POST /{trxNo}/subsequent-release | isActive=true, Received, target registered | No |
-| Receive | POST /{trxNo}/receive | isActive=true, no dup, seq turn | No |
-| Mark as Done | POST /{trxNo}/done | FA+default only, proof if required | No |
-| Forward | POST /{trxNo}/forward | isActive=true, Received, target NOT registered | Yes (Forward) |
-| Return to Sender | POST /{trxNo}/return | isActive=true, Received, default, reason+remarks | No |
-| Reply | POST /{trxNo}/reply | isActive=true, Received, any type | Yes + new doc |
-| Close Single | POST /documents/{docNo}/close | origin only, remarks required | No |
-| Close Bulk | POST /documents/close-bulk | origin, Completed docs only | No |
-| Edit & Re-release | PUT /documents/{docNo}/re-release | origin, doc=Returned | Yes (Default) |
-| Copy to New | POST /documents/{docNo}/copy | origin only | Yes + new doc |
-| Manage Recipients | PATCH /{trxNo}/recipients | origin, Processing, atomic | No |
-| Official Notes | POST /documents/{docNo}/notes | active participant, not Closed | No |
+| Action             | Route                             | Key Guard                                        | New TRX       |
+| ------------------ | --------------------------------- | ------------------------------------------------ | ------------- |
+| Initial Release    | POST /{trxNo}/release             | status=Draft, origin only                        | No            |
+| Subsequent Release | POST /{trxNo}/subsequent-release  | isActive=true, Received, target registered       | No            |
+| Receive            | POST /{trxNo}/receive             | isActive=true, no dup, seq turn                  | No            |
+| Mark as Done       | POST /{trxNo}/done                | FA+default only, proof if required               | No            |
+| Forward            | POST /{trxNo}/forward             | isActive=true, Received, target NOT registered   | Yes (Forward) |
+| Return to Sender   | POST /{trxNo}/return              | isActive=true, Received, default, reason+remarks | No            |
+| Reply              | POST /{trxNo}/reply               | isActive=true, Received, any type                | Yes + new doc |
+| Close Single       | POST /documents/{docNo}/close     | origin only, remarks required                    | No            |
+| Close Bulk         | POST /documents/close-bulk        | origin, Completed docs only                      | No            |
+| Edit & Re-release  | PUT /documents/{docNo}/re-release | origin, doc=Returned                             | Yes (Default) |
+| Copy to New        | POST /documents/{docNo}/copy      | origin only                                      | Yes + new doc |
+| Manage Recipients  | PATCH /{trxNo}/recipients         | origin, Processing, atomic                       | No            |
+| Official Notes     | POST /documents/{docNo}/notes     | active participant, not Closed                   | No            |
 
 ---
 
@@ -857,6 +886,7 @@ Each notification class:
 ## Key Business Rules — Never Violate
 
 ### Chapter 1
+
 ```
 1.  NEVER hard delete DocumentRecipient — isActive=false only
 2.  NEVER manually set Transaction=Completed — use TransactionStatusService
@@ -881,6 +911,7 @@ Each notification class:
 ```
 
 ### Chapter 2
+
 ```
 21. /dashboard is the default landing page after login — always
 22. Dashboard quick actions: Receive, Release, Close ONLY
@@ -917,6 +948,7 @@ Each notification class:
 ## Frontend Conventions
 
 ### Composables — All Files
+
 ```typescript
 // Chapter 1
 useTransaction.ts        → transaction action methods
@@ -936,19 +968,21 @@ useSignatories.ts        → signatory library + document signatories
 ```
 
 ### useActionVisibility — All Computeds
+
 ```typescript
-canReceive            // isActive=true, not received, isActiveSequentialStep
-canRelease            // isOriginator, status=Draft
-canSubsequentRelease  // isActive=true, has Received, default only
-canMarkAsDone         // FA, isActive=true, has Received, default only
-canForward            // isActive=true, has Received, default only
-canReturn             // isActive=true, has Received, default only
-canReply              // isActive=true, has Received (any recipient type)
-canClose              // isOriginator only (not Draft, not Closed)
-canManageRecipients   // isOriginator, status=Processing
+canReceive; // isActive=true, not received, isActiveSequentialStep
+canRelease; // isOriginator, status=Draft
+canSubsequentRelease; // isActive=true, has Received, default only
+canMarkAsDone; // FA, isActive=true, has Received, default only
+canForward; // isActive=true, has Received, default only
+canReturn; // isActive=true, has Received, default only
+canReply; // isActive=true, has Received (any recipient type)
+canClose; // isOriginator only (not Draft, not Closed)
+canManageRecipients; // isOriginator, status=Processing
 ```
 
 ### Pinia Stores
+
 ```typescript
 // Existing
 useAuthStore()            → auth state, user, office_id, role
@@ -963,19 +997,21 @@ useNotificationsStore()   → notifications list + unread count
 ```
 
 ### Modal Convention
+
 ```
 Name:    [Verb]Modal.vue
 Emits:   past tense — 'received', 'forwarded', 'returned', 'done', 'replied', 'closed'
 ```
 
 ### Error Handling
+
 ```typescript
 try {
-    const result = await someAction(trxNo, payload)
-    toast.success(result.message)
-    emit('action-completed')
+  const result = await someAction(trxNo, payload);
+  toast.success(result.message);
+  emit("action-completed");
 } catch (e: any) {
-    toast.error(e.response?.data?.message || e.message || 'Action failed')
+  toast.error(e.response?.data?.message || e.message || "Action failed");
 }
 ```
 
@@ -994,13 +1030,15 @@ try {
 { path: '/dashboard',              component: DashboardView }
 { path: '/incoming',               component: IncomingView }
 { path: '/documents',              component: MyDocumentsView }
-{ path: '/documents/received', component: ReceivedView },
-{ path: '/documents/released', component: ReleasedView },
-{ path: '/documents/archived', component: ArchivedView },
 { path: '/documents/new',          component: ProfilingView }
 { path: '/documents/:docNo',       component: ViewDocumentView }
 { path: '/documents/:docNo/edit',  component: ReReleaseView }
 { path: '/new-document',           component: CopyToNewView }  // ?from={docNo}
+
+//Additionals for chapter 1
+{ path: '/documents/received', component: ReceivedView },
+{ path: '/documents/released', component: ReleasedView },
+{ path: '/documents/archived', component: ArchivedView },
 
 // Chapter 2
 { path: '/reports',                      component: ReportsHomeView }
@@ -1029,6 +1067,7 @@ try {
 ---
 
 **Sidebar component — collapsible Documents section:**
+
 ```
 Documents parent item:
   Click → toggles open/closed
@@ -1042,6 +1081,7 @@ Children shown when expanded:
 ```
 
 **Tab mapping to existing spec:**
+
 ```
 My Documents  → documents where office_id = auth office (origin view)
                tabs: Draft | Active | Returned | Completed | Closed
@@ -1055,6 +1095,7 @@ Released      → documents released by this office, tracking recipient status
 Archived      → Closed documents — read-only repository
                searchable, downloadable
 ```
+
 ---
 
 ## App Navigation
@@ -1126,6 +1167,7 @@ Examples:
 Be specific. Reference the spec. State the chapter and module.
 
 ### Good Examples
+
 ```
 "Implement DashboardController forAction() method.
  Route: GET /api/dashboard/for-action.
@@ -1146,6 +1188,7 @@ Be specific. Reference the spec. State the chapter and module.
 ```
 
 ### Bad Examples
+
 ```
 "Add the dashboard"        ← too vague
 "Fix the action buttons"   ← no context

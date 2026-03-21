@@ -44,18 +44,22 @@ class StoreTransactionRequest extends FormRequest
             // 'signatories.*.name'   => 'required_with:signatories|string',
             // 'signatories.*.position' => 'required_with:signatories|string',
 
-            //files
+            //files (source=upload needs temp_path, source=repository needs office_file_id)
             'files'                   => 'nullable|array',
+            'files.*.source'          => 'nullable|string|in:upload,repository',
             'files.*.name'            => 'required_with:files|string',
-            'files.*.temp_path'       => 'required_with:files|string',
+            'files.*.temp_path'       => 'nullable|string',
             'files.*.type'            => 'required_with:files|string',
             'files.*.size_bytes'      => 'required_with:files|integer',
+            'files.*.office_file_id'  => 'nullable|integer',
 
             'attachments'                  => 'nullable|array',
+            'attachments.*.source'         => 'nullable|string|in:upload,repository',
             'attachments.*.name'           => 'required_with:attachments|string',
-            'attachments.*.temp_path'      => 'required_with:attachments|string',
+            'attachments.*.temp_path'      => 'nullable|string',
             'attachments.*.type'           => 'required_with:attachments|string',
             'attachments.*.size_bytes'     => 'required_with:attachments|integer',
+            'attachments.*.office_file_id' => 'nullable|integer',
 
             // Optional fields for binding documents
             'isDone'               => 'boolean',

@@ -47,8 +47,20 @@ export function useActionVisibility(transaction: Ref<Transaction | null>) {
         logs.value.some(l => l.status === 'Forwarded' && l.office_id === myOfficeId.value)
     )
 
+    /** Check if my office has performed a subsequent release (Released log with office_id = myOffice) */
+    const myOfficeHasSubsequentlyReleased = computed(() =>
+        logs.value.some(l => 
+            l.status === 'Released' && 
+            l.office_id === myOfficeId.value &&
+            l.routed_office_id // Has a target office, meaning it's a subsequent release not initial release
+        )
+    )
+
     const myOfficeHasTerminalAction = computed(() =>
-        myOfficeHasDone.value || myOfficeHasForwarded.value || myOfficeHasReturned.value
+        myOfficeHasDone.value || 
+        myOfficeHasForwarded.value || 
+        myOfficeHasReturned.value ||
+        myOfficeHasSubsequentlyReleased.value
     )
 
     const isProcessing = computed(() => transaction.value?.status === 'Processing')
@@ -61,7 +73,7 @@ export function useActionVisibility(transaction: Ref<Transaction | null>) {
     /** Is my office an active recipient of ANY type (default, cc, bcc)? */
     const isActiveAnyRecipient = computed(() =>
         recipients.value.some(
-            r => r.office_id === myOfficeId.value && r.isActive !== false
+            r => r.office_id === myOfficeId.value && r.isActive === true
         )
     )
 
@@ -70,7 +82,7 @@ export function useActionVisibility(transaction: Ref<Transaction | null>) {
         recipients.value.some(
             r => r.office_id === myOfficeId.value
                 && r.recipient_type === 'default'
-                && r.isActive !== false
+                && r.isActive === true
         )
     )
 

@@ -1,21 +1,18 @@
 <script setup lang="ts">
+import { computed, ref } from "vue";
 import BaseButton from "../ui/buttons/BaseButton.vue";
 import { useStepNavigation } from "@/composables/useStepNavigation";
-
-const { currentStep, setStep, meta_data } = useStepNavigation();
-
-import { useDocumentInformation } from "@/composables/useDocumentInformation"; // adjust path if needed
-import { computed } from "vue";
+import { useDocumentInformation } from "@/composables/useDocumentInformation";
 import FileTaskCard from "../uploader/FileTaskCard.vue";
-import { Fa6FilePdf, Fa6RegCopy } from "vue-icons-plus/fa6";
 import { BsFileEarmarkPdf } from "vue-icons-plus/bs";
 import FrmLabel from "../ui/labels/FrmLabel.vue";
 import OriginBadge from "../ui/badges/OriginBadge.vue";
 import ReplyHeader from "./ReplyHeader.vue";
-import { useTransaction } from "@/composables/useTransaction";
+import { useAuthStore } from "@/stores/auth";
 
+const { currentStep, setStep, meta_data } = useStepNavigation();
 const { documentInformation, submitDocument } = useDocumentInformation();
-
+const authStore = useAuthStore();
 
 const formattedDate = computed(() =>
   new Date(documentInformation.date).toLocaleDateString("en-US", {
@@ -25,41 +22,26 @@ const formattedDate = computed(() =>
   })
 );
 
-const originBg = (originType: string): string => {
-  switch (originType) {
-    case "Internal":
-      return "bg-lime-600";
-    case "External":
-      return "bg-amber-600";
-    case "Email":
-      return "bg-sky-500";
+// ─── Submit confirm modal ─────────────────────────────────────────────────────
 
-    default:
-      return "bg-lime-200";
-  }
-};
-
-const { transaction } = useTransaction();
+const showConfirmModal = ref(false);
+const submitError = ref('');
+const isSubmitting = ref(false);
 
 const proceedToNext = async () => {
-  console.log("====================================");
-  console.log("test");
-  console.log("====================================");
-
-  if (confirm("Are you sure? This action will generate a document number, and release your document to the listed recipients")) {
-    try {
-      const { data } = await submitDocument();
-      if (data.success) {
-        meta_data.value = data.data;
-      }
-
-      alert("Success!");
-
-      //Set Step 4 Form
+  isSubmitting.value = true;
+  submitError.value = '';
+  try {
+    const { data } = await submitDocument();
+    if (data.success) {
+      meta_data.value = data.data;
+      showConfirmModal.value = false;
       setStep(4);
-    } catch (error) {
-      alert(error)
     }
+  } catch (error: any) {
+    submitError.value = error.response?.data?.message ?? error.message ?? 'Submission failed. Please try again.';
+  } finally {
+    isSubmitting.value = false;
   }
 };
 </script>
@@ -67,7 +49,6 @@ const proceedToNext = async () => {
 <template>
   <div class="flex-1 w-full h-full bg-white">
     <div class="flex items-center h-[50px] justify-between p-2 border-t border-gray-200 bg-gray-50">
-      <!-- <h1 class="text-lg font-semibold text-gray-800">Document Overview</h1> -->
       <ReplyHeader />
       <div class="flex gap-2 ml-auto">
         <BaseButton :btn-text="'Back to previous step'" :action="() => setStep(2)"
@@ -79,7 +60,7 @@ const proceedToNext = async () => {
               clip-rule="evenodd" />
           </svg>
         </BaseButton>
-        <BaseButton :btn-text="'Proceed to next step'" :action="() => proceedToNext()"
+        <BaseButton :btn-text="'Proceed to next step'" :action="() => showConfirmModal = true"
           :className="'flex items-center ml-auto'">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="mr-2 size-4">
             <path fill-rule="evenodd"
@@ -91,30 +72,23 @@ const proceedToNext = async () => {
     </div>
     <hr class="text-gray-200" />
     <div class="flex flex-col h-[calc(100svh-100px)] overflow-y-auto p-4">
-      <!-- <h2 class="mb-2 text-lg font-semibold">Document Overview</h2> -->
       <div class="p-4 dark:bg-gray-800 dark:text-white">
         <div>
           <div class="space-y-3">
-            <!-- <h1 class="mb-2 font-bold ">Document Informaiton</h1> -->
-            <!-- Document Information Header Start -->
+            <!-- Document Information Header -->
             <div class="p-5 text-white bg-teal-800 rounded-lg">
               <div class="flex items-center justify-between">
                 <!-- Document No. -->
                 <div class="flex-row sm:flex-col">
                   <div class="flex-row items-center font-bold sm:flex">
                     Document Number:
-                    <span class="flex items-center font-bold sm:ml-3 text-lime-200">
-                      DA-CO-TO-123-XXXXXX
+                    <span class="flex items-center font-bold sm:ml-3 text-lime-200/70 italic text-sm">
+                      Pending — assigned on submit
                     </span>
                   </div>
                 </div>
                 <!-- Document status -->
                 <div class="flex items-center">
-                  <!-- <span
-                      class="bg-gray-400 text-[10px] px-2 py-1 uppercase font-bold rounded-full"
-                      >Draft</span
-                    > -->
-
                   <div class="text-[10px] text-gray-300 mr-2">Status:</div>
                   <span
                     class="px-2 bg-gray-400 border shadow-2xl py-1 text-white uppercase text-[9px] font-black rounded-full">
@@ -128,21 +102,15 @@ const proceedToNext = async () => {
               <div class="grid grid-flow-row gap-4 sm:grid-flow-col sm:grid-cols-12">
                 <div class="col-span-2">
                   <div class="text-[10px] text-gray-300">Date</div>
-                  <div class="text-xs font-medium">
-                    {{ formattedDate }}
-                  </div>
+                  <div class="text-xs font-medium">{{ formattedDate }}</div>
                 </div>
                 <div class="col-span-4">
                   <div class="text-[10px] text-gray-300">Document Type</div>
-                  <div class="text-xs font-medium">
-                    {{ documentInformation.documentType.type }}
-                  </div>
+                  <div class="text-xs font-medium">{{ documentInformation.documentType.type }}</div>
                 </div>
                 <div class="col-span-4">
                   <div class="text-[10px] text-gray-300">Action Taken</div>
-                  <div class="text-xs font-medium">
-                    {{ documentInformation.actionTaken.action }}
-                  </div>
+                  <div class="text-xs font-medium">{{ documentInformation.actionTaken.action }}</div>
                 </div>
                 <div class="col-span-2">
                   <div class="text-[10px] text-gray-300">Origin Type</div>
@@ -150,15 +118,11 @@ const proceedToNext = async () => {
                 </div>
               </div>
             </div>
-            <!-- Document Information Header End -->
 
-            <!-- Alert card for external documents -->
-            <!-- External Document Start -->
+            <!-- External Document Alert -->
             <div v-if="documentInformation.originType === 'External'"
               class="p-2 bg-orange-100 border border-dashed rounded-lg border-amber-600">
-              <h3 class="text-xs font-bold text-amber-600">
-                External Document
-              </h3>
+              <h3 class="text-xs font-bold text-amber-600">External Document</h3>
               <p class="text-xs text-gray-600">
                 This document is from an external source and delivered by sender
                 <span class="font-bold">{{ documentInformation.sender }}</span> a
@@ -167,9 +131,8 @@ const proceedToNext = async () => {
                 <span class="font-bold">{{ documentInformation.sender_office }}</span>
               </p>
             </div>
-            <!-- External Document End -->
 
-            <!-- Email Document Start -->
+            <!-- Email Document Alert -->
             <div v-if="documentInformation.originType === 'Email'"
               class="p-2 border border-dashed rounded-lg bg-sky-100 border-sky-600">
               <h3 class="text-xs font-bold text-sky-600">Emailed Document</h3>
@@ -178,25 +141,21 @@ const proceedToNext = async () => {
                 email via <span class="font-bold">{{ documentInformation.sender_email }}</span>
               </p>
             </div>
-            <!-- Email Document End -->
 
-            <!-- Document Origin -->
+            <!-- From -->
             <div
-              class="grid w-full grid-cols-12 border border-gray-100 divide-white rounded-lg overflow-clip divide-x-5 bg-gray-50">
+              class="grid w-full grid-cols-12 border border-gray-100 rounded-lg overflow-clip bg-gray-50">
               <div class="col-span-2 p-3">
                 <FrmLabel label="From:" />
               </div>
               <div class="col-span-10 p-3 pl-10">
-                <div class="text-xs">
-                  Systems Application Development Division
-                </div>
+                <div class="text-xs">{{ authStore.user?.office_name ?? '—' }}</div>
               </div>
             </div>
-            <!-- Document Origin End -->
 
-            <!-- Document Recipients -->
+            <!-- To -->
             <div
-              class="grid w-full grid-cols-12 border border-gray-100 divide-white rounded-lg overflow-clip divide-x-5 bg-gray-50">
+              class="grid w-full grid-cols-12 border border-gray-100 rounded-lg overflow-clip bg-gray-50">
               <div class="col-span-2 p-3">
                 <FrmLabel label="To:" />
               </div>
@@ -215,68 +174,51 @@ const proceedToNext = async () => {
                 </ul>
               </div>
             </div>
-            <!-- Document Recipients End -->
 
-            <!-- Document Subject Start-->
+            <!-- Subject -->
             <div
-              class="grid w-full grid-cols-12 border border-gray-100 divide-white rounded-lg overflow-clip divide-x-5 bg-gray-50">
+              class="grid w-full grid-cols-12 border border-gray-100 rounded-lg overflow-clip bg-gray-50">
               <div class="col-span-2 p-3">
                 <FrmLabel label="Subject:" />
               </div>
               <div class="col-span-10 p-3 pl-10">
-                <p class="text-xs font-light">
-                  {{ documentInformation.subject }}
-                </p>
+                <p class="text-xs font-light">{{ documentInformation.subject }}</p>
               </div>
             </div>
-            <!-- Document Subject End -->
 
-            <!-- Document Remarks Start -->
+            <!-- Remarks -->
             <div
-              class="grid w-full grid-cols-12 border border-gray-100 divide-white rounded-lg overflow-clip divide-x-5 bg-gray-50">
+              class="grid w-full grid-cols-12 border border-gray-100 rounded-lg overflow-clip bg-gray-50">
               <div class="col-span-2 p-3">
                 <FrmLabel label="Remarks:" />
               </div>
               <div class="col-span-10 p-3 pl-10">
-                <p class="text-xs font-light">
-                  {{ documentInformation.remarks }}
-                </p>
+                <p class="text-xs font-light">{{ documentInformation.remarks }}</p>
               </div>
             </div>
-            <!-- Document Remarks End -->
 
-            <!-- Document Signatories Start -->
+            <!-- Signatories -->
             <div
-              class="grid w-full grid-cols-12 border border-gray-100 divide-white rounded-lg overflow-clip divide-x-5 bg-gray-50">
+              class="grid w-full grid-cols-12 border border-gray-100 rounded-lg overflow-clip bg-gray-50">
               <div class="col-span-2 p-3">
                 <FrmLabel label="Signatories:" />
               </div>
               <div class="col-span-10 p-3 pl-10">
                 <ul class="space-y-4">
-                  <li>
-                    <!-- Signatory Name -->
-                    <div class="text-xs font-medium">Oyie Mahomie</div>
-                    <!-- Signatory Designation and Office -->
-                    <div class="text-xs font-light text-gray-600">
-                      Director, Information Communications Technology Service
-                    </div>
+                  <li v-if="documentInformation.signatories.length === 0">
+                    <div class="text-xs text-gray-400 italic">No signatories selected.</div>
                   </li>
-                  <li>
-                    <!-- Signatory Name -->
-                    <div class="text-xs font-medium">Camilo A. Andi Jr.</div>
-                    <!-- Signatory Designation and Office -->
-                    <div class="text-xs font-light text-gray-600">
-                      Chief, Systems Application Development Division
-                    </div>
+                  <li v-else v-for="sig in documentInformation.signatories" :key="sig.id">
+                    <div class="text-xs font-medium">{{ sig.name }}</div>
+                    <div class="text-xs font-light text-gray-600">{{ sig.position }} — {{ sig.office }}</div>
                   </li>
                 </ul>
               </div>
             </div>
-            <!-- Document Signatories End -->
 
-            <!-- Document Attachments Start -->
+            <!-- Attachments -->
             <div
-              class="grid w-full grid-cols-12 border border-gray-100 divide-white rounded-lg overflow-clip divide-x-5 bg-gray-50">
+              class="grid w-full grid-cols-12 border border-gray-100 rounded-lg overflow-clip bg-gray-50">
               <div class="col-span-2 p-3">
                 <FrmLabel label="Attachments:" />
               </div>
@@ -294,13 +236,9 @@ const proceedToNext = async () => {
                         <BsFileEarmarkPdf class="mr-2 text-red-500" />
                         <div>
                           <div class="text-xs font-semibold">
-                            <a :href="file.url" target="_blank">
-                              {{ file.name }}
-                            </a>
+                            <a :href="file.url" target="_blank">{{ file.name }}</a>
                           </div>
-                          <div class="text-[10px] text-gray-400">
-                            {{ file.size }}
-                          </div>
+                          <div class="text-[10px] text-gray-400">{{ file.size }}</div>
                         </div>
                       </li>
                     </ul>
@@ -317,169 +255,39 @@ const proceedToNext = async () => {
                         <BsFileEarmarkPdf class="mr-2 text-red-500" />
                         <div>
                           <div class="text-xs font-semibold">
-                            <a :href="attachment.url" target="_blank">
-                              {{ attachment.name }}
-                            </a>
+                            <a :href="attachment.url" target="_blank">{{ attachment.name }}</a>
                           </div>
-                          <div class="text-[10px] text-gray-400">
-                            {{ attachment.size }}
-                          </div>
+                          <div class="text-[10px] text-gray-400">{{ attachment.size }}</div>
                         </div>
                       </li>
                     </ul>
                   </div>
                 </div>
-              </div>
-            </div>
-            <!-- Document Signatories End -->
-
-            <div class="hidden">
-              <!-- Document Information Content Start -->
-              <div class="grid sm:grid-cols-12 gap-7">
-                <!-- Document Information -->
-                <div class="space-y-6 sm:col-span-7">
-                  <!--Start Subject Block -->
-                  <div class="relative bg-white border-gray-300 rounded-lg">
-                    <h1 class="mb-2 text-xs font-bold bg-white -top-5 left-2">
-                      Subject
-                    </h1>
-
-                    <div class="text-xs font-light">
-                      {{
-                        documentInformation.subject
-                          ? documentInformation.subject
-                          : "N/A"
-                      }}
-                    </div>
-                  </div>
-                  <!--End Subject Block -->
-
-                  <!--Start Remarks Block -->
-                  <div class="relative bg-white border-gray-300 rounded-lg">
-                    <h1 class="mb-2 text-xs font-bold bg-white -top-5 left-2">
-                      Remarks
-                    </h1>
-
-                    <div class="text-xs font-light">
-                      {{
-                        documentInformation.remarks
-                          ? documentInformation.remarks
-                          : "N/A"
-                      }}
-                    </div>
-                  </div>
-                  <!--Start Remarks Block -->
-
-                  <!--Start Signatories Block -->
-                  <div class="relative bg-white border-gray-300 rounded-lg">
-                    <h1 class="mb-2 text-xs font-bold bg-white -top-5 left-2">
-                      Signatories
-                    </h1>
-
-                    <div class="text-xs font-light"></div>
-                  </div>
-                </div>
-
-                <div class="relative bg-white border-gray-300 rounded-lg sm:col-span-5">
-                  <h1 class="mb-2 text-xs font-bold bg-white -top-5 left-2">
-                    Attachments
-                  </h1>
-
-                  <div class="grid items-stretch grid-flow-row gap-5">
-                    <div class="h-full col-span-1">
-                      <h1 class="mb-2 text-xs font-bold bg-white">Main File</h1>
-                      <ul class="space-y-1">
-                        <li v-if="documentInformation.files.length === 0"
-                          class="p-2 bg-gray-100 border border-gray-200 rounded-lg">
-                          <div class="text-xs text-center">
-                            No file uploaded
-                          </div>
-                        </li>
-                        <li v-else v-for="file in documentInformation.files"
-                          class="flex items-center p-2 bg-gray-100 border border-gray-200 rounded-lg">
-                          <BsFileEarmarkPdf class="mr-2 text-red-500" />
-                          <div>
-                            <div class="text-xs font-semibold">
-                              <a :href="file.url" target="_blank">
-                                {{ file.name }}
-                              </a>
-                            </div>
-                            <div class="text-[10px] text-gray-400">
-                              {{ file.size }}
-                            </div>
-                          </div>
-                        </li>
-                      </ul>
-                    </div>
-                    <div class="h-full col-span-1">
-                      <h1 class="mb-2 text-xs font-bold bg-white">
-                        Attachment File
-                      </h1>
-                      <ul class="space-y-1">
-                        <li v-if="documentInformation.attachments.length === 0"
-                          class="p-2 bg-gray-100 border border-gray-200 rounded-lg">
-                          <div class="text-xs text-center">
-                            No file uploaded
-                          </div>
-                        </li>
-                        <li v-else v-for="attachment in documentInformation.attachments"
-                          class="flex items-center p-2 bg-gray-100 border border-gray-200 rounded-lg">
-                          <BsFileEarmarkPdf class="mr-2 text-red-500" />
-                          <div>
-                            <div class="text-xs font-semibold">
-                              <a :href="attachment.url" target="_blank">
-                                {{ attachment.name }}
-                              </a>
-                            </div>
-                            <div class="text-[10px] text-gray-400">
-                              {{ attachment.size }}
-                            </div>
-                          </div>
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-                <!-- Document Information Content End -->
-              </div>
-
-              <hr class="my-4 text-gray-200" />
-              <h1 class="my-4 font-bold bg-white">Receiver's Informaiton</h1>
-              <!-- Receivers Information Content Start -->
-              <div class="grid grid-cols-12">
-                <div class="col-span-12">
-                  <div class="relative bg-white border-gray-300 rounded-lg">
-                    <h1 class="mb-2 text-xs font-bold bg-white -top-5 left-2">
-                      Recipients
-                    </h1>
-                    <ul
-                      class="hidden border border-gray-200 divide-gray-200 rounded-lg md:block divide-y-1 overflow-clip">
-                      <li class="grid grid-cols-12 p-2 bg-gray-100 border-b">
-                        <div class="col-span-2 text-xs font-bold">
-                          Agency/Region
-                        </div>
-                        <div class="col-span-5 text-xs font-bold">Service</div>
-                        <div class="col-span-5 text-xs font-bold">Office</div>
-                      </li>
-                      <li v-for="recipient in documentInformation.recipients" :key="recipient.office_code"
-                        class="grid grid-cols-12 p-2">
-                        <div class="col-span-2 text-xs">
-                          {{ recipient.region }}
-                        </div>
-                        <div class="col-span-5 text-xs">
-                          {{ recipient.service }}
-                        </div>
-                        <div class="col-span-5 text-xs">
-                          {{ recipient.office }}
-                        </div>
-                      </li>
-                    </ul>
-                  </div>
-                </div>
-                <!-- Receivers Information Content End -->
               </div>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Submit Confirmation Modal -->
+    <div v-if="showConfirmModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div class="bg-white rounded-xl shadow-xl w-full max-w-sm p-5 space-y-4">
+        <h3 class="text-base font-semibold text-gray-800">Submit Document</h3>
+        <p class="text-sm text-gray-600">
+          This will generate a <strong>Document Number</strong>, <strong>Transaction Number</strong>,
+          and <strong>QR Code</strong>. The document will be saved as a draft ready for release in the next step.
+        </p>
+        <p v-if="submitError" class="text-sm text-red-600">{{ submitError }}</p>
+        <div class="flex justify-end gap-3">
+          <button type="button" @click="showConfirmModal = false"
+            class="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">
+            Cancel
+          </button>
+          <button type="button" :disabled="isSubmitting" @click="proceedToNext"
+            class="px-4 py-2 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 font-medium">
+            {{ isSubmitting ? 'Submitting…' : 'Submit & Continue' }}
+          </button>
         </div>
       </div>
     </div>

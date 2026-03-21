@@ -19,6 +19,11 @@ class DocumentRecipient extends Model
         'isActive'
     ];
 
+    protected $casts = [
+        'isActive' => 'boolean',
+        'sequence' => 'integer',
+    ];
+
     public function document()
     {
         return $this->belongsTo(Document::class, 'document_no', 'document_no');

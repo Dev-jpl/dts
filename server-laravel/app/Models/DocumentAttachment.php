@@ -16,9 +16,15 @@ class DocumentAttachment extends Model
         'attachment_type',
         'office_id',
         'office_name',
+        'office_file_id',
         'created_by_id',
         'created_by_name',
     ];
+
+    public function officeFile()
+    {
+        return $this->belongsTo(OfficeFile::class, 'office_file_id');
+    }
 
     public function document()
     {

@@ -20,6 +20,7 @@ const {
 } = useMyDocuments();
 
 // ── Tabs ───────────────────────────────────────────────────────────────────────
+
 const tabs = [
     { tabLabel: "All",       status: undefined },
     { tabLabel: "Active",    status: "Active" },
@@ -29,17 +30,23 @@ const tabs = [
     { tabLabel: "Closed",    status: "Closed" },
 ];
 
-const activeTab = ref(tabs[0].tabLabel);
-const tabRefs = ref<HTMLElement[]>([]);
-const indicatorStyle = ref({});
-
-function updateIndicator() {
-    const index = tabs.findIndex(t => t.tabLabel === activeTab.value);
-    const el = tabRefs.value[index];
-    if (el) {
-        indicatorStyle.value = { left: el.offsetLeft + "px", width: el.offsetWidth + "px" };
+// Compute counts for each tab
+const tabCounts = computed(() => {
+    const counts: Record<string, number> = {
+        All: documents.value.length,
+        Active: 0,
+        Draft: 0,
+        Returned: 0,
+        Completed: 0,
+        Closed: 0,
+    };
+    for (const doc of documents.value) {
+        if (doc.status in counts) counts[doc.status]++;
     }
-}
+    return counts;
+});
+
+const activeTab = ref(tabs[0].tabLabel);
 
 // ── Filter state ───────────────────────────────────────────────────────────────
 const search = ref("");
@@ -120,12 +127,10 @@ watch(search, () => {
 });
 
 watch([activeTab, selectedDocType, selectedOfficeId, dateFrom, dateTo], () => {
-    updateIndicator();
     resetAndFetch();
 });
 
 onMounted(() => {
-    updateIndicator();
     fetchFilterOptions();
     doFetch();
 });
@@ -163,23 +168,39 @@ const transactionTypeStyle: Record<string, string> = {
 </script>
 
 <template>
-    <ScrollableContainer padding="0" rem="50px" background="white" class="bg-white">
+    <ScrollableContainer padding="0" px="50px" background="white" class="bg-white">
         <div class="w-full">
 
             <!-- ── Header + Tabs ───────────────────────────────────────────── -->
-            <div class="flex items-end justify-between w-full border-b border-gray-200">
+            <div class="flex flex-col items-start justify-start w-full border-b border-gray-200 sm:items-end sm:flex-row sm:justify-between">
                 <div class="p-4">
-                    <h1 class="font-bold text-gray-600">My Documents</h1>
+                    <h1 class="text-lg font-bold text-gray-700">My Documents</h1>
+                    <p class="text-xs text-gray-400">Documents profiled by your office</p>
                 </div>
-                <div class="relative flex pr-4">
-                    <div v-for="(tab, index) in tabs" :key="tab.tabLabel"
-                        :ref="el => { if (el) tabRefs[index] = el as HTMLElement }" @click="activeTab = tab.tabLabel"
-                        class="px-2 mb-2 w-[80px] py-2 text-xs text-center cursor-pointer"
-                        :class="activeTab === tab.tabLabel ? 'text-teal-700 font-bold' : 'text-gray-500'">
+                <div class="grid grid-cols-6 gap-1 pr-4">
+                    <button
+                        v-for="tab in tabs"
+                        :key="tab.tabLabel"
+                        @click="activeTab = tab.tabLabel"
+                        :class="[
+                            'px-4 py-2 text-xs font-medium rounded-t-lg transition-colors',
+                            activeTab === tab.tabLabel
+                                ? 'bg-teal-700 text-white'
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        ]"
+                    >
                         {{ tab.tabLabel }}
-                    </div>
-                    <div class="absolute bottom-0 h-1 transition-all duration-300 bg-amber-500 rounded-t-md"
-                        :style="indicatorStyle" />
+                        <span
+                            v-if="tabCounts[tab.tabLabel] > 0"
+                            class="ml-1.5 px-1.5 py-0.5 text-[10px] rounded-full"
+                            :class="[
+                                activeTab === tab.tabLabel ? 'bg-teal-600' : 'bg-gray-200',
+                                tab.tabLabel === 'Returned' && activeTab !== tab.tabLabel ? 'bg-amber-500 text-white' : ''
+                            ]"
+                        >
+                            {{ tabCounts[tab.tabLabel] > 99 ? '99+' : tabCounts[tab.tabLabel] }}
+                        </span>
+                    </button>
                 </div>
             </div>
 

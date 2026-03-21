@@ -1,13 +1,23 @@
-export async function fetchActions() {
-    const response = await fetch("/data/lib_actions.json");
-    const data = await response.json();
+import API from '@/api'
 
-    return data.map((item: any) => ({
-        item_id: item.for_id || item.for_id,
-        item_title: item.for,
-        return_value: {
-            id: item.for_id,
-            action: item.for
-        }
-    }));
+export interface ActionReturnValue {
+    id: number
+    action: string
+    type: 'FA' | 'FI'
+    reply_is_terminal: boolean
+    requires_proof: boolean
+    proof_description: string | null
+    default_urgency_level: string | null
+}
+
+export interface ActionLibraryItem {
+    item_id: number
+    item_title: string
+    item_desc: string
+    return_value: ActionReturnValue
+}
+
+export async function fetchActions(): Promise<ActionLibraryItem[]> {
+    const { data } = await API.get('/library/actions')
+    return data as ActionLibraryItem[]
 }

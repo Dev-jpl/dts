@@ -78,17 +78,11 @@ const { deviceType } = useDeviceType();
         </div>
 
         <div class="bottom-0 pt-[200px] sm:pt-0">
-          <router-view v-slot="{ Component }">
-            <transition
-              name="fade-slide"
-              mode="out-in"
-            >
-              <!-- <div> -->
-              <Component
-                :is="Component"
-                :key="route.name"
-              />
-              <!-- </div> -->
+          <router-view v-slot="{ Component, route: childRoute }">
+            <transition name="fade-slide" mode="out-in">
+              <div :key="childRoute.name ?? 'home'">
+                <component v-if="Component" :is="Component" />
+              </div>
             </transition>
           </router-view>
         </div>

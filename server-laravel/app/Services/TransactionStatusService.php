@@ -125,39 +125,56 @@ class TransactionStatusService
 
     private static function isSingleComplete(DocumentTransaction $trx, $logs, bool $isFI): bool
     {
-        $recipient = $trx->recipients
-            ->where('recipient_type', 'default')
-            ->where('isActive', true)
-            ->first();
-
-        if (!$recipient) {
+        // Get all default recipients (not just active ones)
+        $allDefault = $trx->recipients->where('recipient_type', 'default');
+        
+        if ($allDefault->isEmpty()) {
             return false;
         }
 
+        // Check if any active default recipient exists
+        $activeDefault = $allDefault->where('isActive', true);
+        
+        // If no active recipients exist, all must have completed (isActive set to false on completion)
+        // Check that all default recipients have reached terminal state
+        if ($activeDefault->isEmpty()) {
+            return $allDefault->every(fn($r) => self::officeTerminalDone($r->office_id, $logs, $isFI));
+        }
+
+        // Otherwise, check the single active recipient
+        $recipient = $activeDefault->first();
         return self::officeTerminalDone($recipient->office_id, $logs, $isFI);
     }
 
     private static function isMultipleComplete(DocumentTransaction $trx, $logs, bool $isFI): bool
     {
-        $active = $trx->recipients
-            ->where('recipient_type', 'default')
-            ->where('isActive', true);
-
-        if ($active->isEmpty()) {
+        // Get all default recipients (not just active ones)
+        $allDefault = $trx->recipients->where('recipient_type', 'default');
+        
+        if ($allDefault->isEmpty()) {
             return false;
         }
 
-        return $active->every(fn($r) => self::officeTerminalDone($r->office_id, $logs, $isFI));
+        // Check if any active default recipient exists
+        $activeDefault = $allDefault->where('isActive', true);
+        
+        // If no active recipients exist, all must have completed
+        if ($activeDefault->isEmpty()) {
+            return $allDefault->every(fn($r) => self::officeTerminalDone($r->office_id, $logs, $isFI));
+        }
+
+        // Otherwise, all active recipients must have reached terminal state
+        return $activeDefault->every(fn($r) => self::officeTerminalDone($r->office_id, $logs, $isFI));
     }
 
     private static function isSequentialComplete(DocumentTransaction $trx, $logs, bool $isFI): bool
     {
-        $active = $trx->recipients
+        // Get all default recipients (not just active ones)
+        $allDefault = $trx->recipients
             ->where('recipient_type', 'default')
-            ->where('isActive', true)
             ->sortBy('sequence');
 
-        if ($active->isEmpty()) {
+        if ($allDefault->isEmpty()) {
             return false;
         }
 
@@ -167,7 +184,16 @@ class TransactionStatusService
             return false;
         }
 
-        return $active->every(fn($r) => self::officeTerminalDone($r->office_id, $logs, $isFI));
+        // Check if any active default recipient exists
+        $activeDefault = $allDefault->where('isActive', true);
+        
+        // If no active recipients exist, all must have completed
+        if ($activeDefault->isEmpty()) {
+            return $allDefault->every(fn($r) => self::officeTerminalDone($r->office_id, $logs, $isFI));
+        }
+
+        // Otherwise, all active recipients must have reached terminal state
+        return $activeDefault->every(fn($r) => self::officeTerminalDone($r->office_id, $logs, $isFI));
     }
 
     /**

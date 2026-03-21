@@ -618,4 +618,390 @@ class DocumentController extends Controller
 
         return response()->json(['success' => true, 'data' => $note], 201);
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Received Documents - Enhanced with Stats and Export
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * GET /api/documents/received/stats
+     * Returns stats for received documents within date range.
+     */
+    public function receivedStats(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $startDate = $request->input('start_date', now()->startOfMonth()->toDateString());
+        $endDate = $request->input('end_date', now()->toDateString());
+
+        // Base query for received documents in period
+        $baseQuery = fn() => DocumentTransactionLog::where('office_id', $user->office_id)
+            ->where('status', 'Received')
+            ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59']);
+
+        $totalReceived = $baseQuery()->count();
+
+        // Get unique transaction_nos for completed check
+        $receivedTrxNos = $baseQuery()->pluck('transaction_no')->unique();
+
+        // Count completed (transactions that have terminal action after receive)
+        $completed = DocumentTransactionLog::whereIn('transaction_no', $receivedTrxNos)
+            ->whereIn('status', ['Done', 'Forwarded', 'Returned To Sender'])
+            ->where('office_id', $user->office_id)
+            ->distinct('transaction_no')
+            ->count('transaction_no');
+
+        // Count pending (received but no terminal action yet)
+        $pending = $totalReceived - $completed;
+
+        // On-time vs overdue - check due dates
+        $onTime = 0;
+        $overdue = 0;
+
+        $transactions = DocumentTransaction::whereIn('transaction_no', $receivedTrxNos)->get();
+        foreach ($transactions as $trx) {
+            $completedLog = DocumentTransactionLog::where('transaction_no', $trx->transaction_no)
+                ->whereIn('status', ['Done', 'Forwarded', 'Returned To Sender'])
+                ->where('office_id', $user->office_id)
+                ->first();
+
+            if ($completedLog && $trx->due_date) {
+                if ($completedLog->created_at <= $trx->due_date) {
+                    $onTime++;
+                } else {
+                    $overdue++;
+                }
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'total_received' => $totalReceived,
+                'completed' => $completed,
+                'pending' => $pending,
+                'on_time' => $onTime,
+                'overdue' => $overdue,
+                'period' => [
+                    'start_date' => $startDate,
+                    'end_date' => $endDate,
+                ],
+            ],
+        ]);
+    }
+
+    /**
+     * GET /api/documents/received/export
+     * Export received documents to Excel.
+     */
+    public function receivedExport(Request $request)
+    {
+        $user = $request->user();
+        $startDate = $request->input('start_date', now()->startOfMonth()->toDateString());
+        $endDate = $request->input('end_date', now()->toDateString());
+
+        $data = DocumentTransactionLog::with(['transaction.document'])
+            ->where('office_id', $user->office_id)
+            ->where('status', 'Received')
+            ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(fn($log) => [
+                'document_no' => $log->document_no,
+                'transaction_no' => $log->transaction_no,
+                'subject' => $log->transaction?->subject ?? '',
+                'document_type' => $log->transaction?->document_type ?? '',
+                'action_type' => $log->transaction?->action_type ?? '',
+                'from_office' => $log->transaction?->office_name ?? '',
+                'received_at' => $log->created_at->format('Y-m-d H:i:s'),
+                'status' => $log->transaction?->status ?? '',
+            ]);
+
+        return response()->json([
+            'success' => true,
+            'data' => $data,
+            'meta' => [
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+                'total' => $data->count(),
+            ],
+        ]);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Released Documents
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * GET /api/documents/released
+     * Returns documents released by this office.
+     */
+    public function released(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
+
+        $query = DocumentTransaction::with([
+            'document',
+            'recipients:id,document_no,transaction_no,office_id,office_name,recipient_type,sequence,isActive',
+            'logs' => fn($q) => $q->whereIn('status', ['Released', 'Received', 'Done', 'Forwarded', 'Returned To Sender'])->orderBy('created_at'),
+        ])
+            ->where('office_id', $user->office_id)
+            ->whereIn('status', ['Processing', 'Completed', 'Returned']);
+
+        // Date range filter on release date
+        if ($startDate && $endDate) {
+            $query->whereHas('logs', fn($q) => $q->where('status', 'Released')
+                ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59']));
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('subject', 'like', "%{$search}%")
+                    ->orWhere('document_no', 'like', "%{$search}%")
+                    ->orWhere('document_type', 'like', "%{$search}%");
+            });
+        }
+
+        return response()->json(
+            $query->orderBy('created_at', 'desc')->paginate($request->integer('per_page', 15))
+        );
+    }
+
+    /**
+     * GET /api/documents/released/stats
+     * Returns stats for released documents within date range.
+     */
+    public function releasedStats(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $startDate = $request->input('start_date', now()->startOfMonth()->toDateString());
+        $endDate = $request->input('end_date', now()->toDateString());
+
+        // Base query for released documents in period
+        $baseQuery = fn() => DocumentTransactionLog::where('office_id', $user->office_id)
+            ->where('status', 'Released')
+            ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59']);
+
+        $totalReleased = $baseQuery()->count();
+
+        // Get unique transaction_nos
+        $releasedTrxNos = $baseQuery()->pluck('transaction_no')->unique();
+
+        // Count by transaction status
+        $transactions = DocumentTransaction::whereIn('transaction_no', $releasedTrxNos)->get();
+
+        $completed = $transactions->where('status', 'Completed')->count();
+        $processing = $transactions->where('status', 'Processing')->count();
+        $returned = $transactions->where('status', 'Returned')->count();
+
+        // Count recipients who have received
+        $totalRecipients = DocumentRecipient::whereIn('transaction_no', $releasedTrxNos)
+            ->where('recipient_type', 'default')
+            ->count();
+
+        $recipientsReceived = DocumentTransactionLog::whereIn('transaction_no', $releasedTrxNos)
+            ->where('status', 'Received')
+            ->distinct('office_id', 'transaction_no')
+            ->count();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'total_released' => $totalReleased,
+                'completed' => $completed,
+                'processing' => $processing,
+                'returned' => $returned,
+                'total_recipients' => $totalRecipients,
+                'recipients_received' => $recipientsReceived,
+                'period' => [
+                    'start_date' => $startDate,
+                    'end_date' => $endDate,
+                ],
+            ],
+        ]);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Archived (Closed) Documents
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * GET /api/documents/archived
+     * Returns closed documents where user's office is originator or recipient.
+     */
+    public function archived(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
+
+        $query = Document::with([
+            'transactions' => fn($q) => $q->latest()->limit(1),
+            'transactions.recipients:id,document_no,transaction_no,office_id,office_name,recipient_type,sequence',
+        ])
+            ->where('status', 'Closed')
+            ->where(function ($q) use ($user) {
+                $q->where('office_id', $user->office_id)
+                    ->orWhereHas('recipients', fn($rq) => $rq->where('office_id', $user->office_id));
+            });
+
+        if ($startDate && $endDate) {
+            $query->whereBetween('updated_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59']);
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('document_no', 'like', "%{$search}%")
+                    ->orWhere('subject', 'like', "%{$search}%")
+                    ->orWhere('document_type', 'like', "%{$search}%")
+                    ->orWhere('action_type', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('document_type')) {
+            $query->where('document_type', $request->document_type);
+        }
+
+        if ($request->filled('origin_office_id')) {
+            $query->where('office_id', $request->origin_office_id);
+        }
+
+        return response()->json(
+            $query->orderBy('updated_at', 'desc')->paginate($request->integer('per_page', 15))
+        );
+    }
+
+    /**
+     * GET /api/documents/archived/stats
+     * Returns stats for archived documents within date range.
+     */
+    public function archivedStats(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $startDate = $request->input('start_date', now()->startOfMonth()->toDateString());
+        $endDate = $request->input('end_date', now()->toDateString());
+
+        $baseQuery = fn() => Document::where('status', 'Closed')
+            ->where(function ($q) use ($user) {
+                $q->where('office_id', $user->office_id)
+                    ->orWhereHas('recipients', fn($rq) => $rq->where('office_id', $user->office_id));
+            })
+            ->whereBetween('updated_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59']);
+
+        $totalArchived = $baseQuery()->count();
+        $originatedByMe = $baseQuery()->where('office_id', $user->office_id)->count();
+        $receivedByMe = $totalArchived - $originatedByMe;
+
+        // Count distinct document types
+        $documentTypes = $baseQuery()->distinct()->pluck('document_type')->count();
+
+        // Count those that were completed before closing vs force-closed
+        $completedBeforeClose = $baseQuery()->whereHas('transactions', function ($q) {
+            $q->whereHas('logs', fn($lq) => $lq->where('status', 'Closed')
+                ->where('activity', 'like', '%bulk-closed%'));
+        })->count();
+        $forceClosed = $totalArchived - $completedBeforeClose;
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'total_archived' => $totalArchived,
+                'originated_by_me' => $originatedByMe,
+                'received_by_me' => $receivedByMe,
+                'document_types' => $documentTypes,
+                'bulk_closed' => $completedBeforeClose,
+                'force_closed' => $forceClosed,
+                'period' => [
+                    'start_date' => $startDate,
+                    'end_date' => $endDate,
+                ],
+            ],
+        ]);
+    }
+
+    /**
+     * GET /api/documents/archived/export
+     * Export archived documents data.
+     */
+    public function archivedExport(Request $request)
+    {
+        $user = $request->user();
+        $startDate = $request->input('start_date', now()->startOfMonth()->toDateString());
+        $endDate = $request->input('end_date', now()->toDateString());
+
+        $data = Document::with(['transactions' => fn($q) => $q->latest()->limit(1)])
+            ->where('status', 'Closed')
+            ->where(function ($q) use ($user) {
+                $q->where('office_id', $user->office_id)
+                    ->orWhereHas('recipients', fn($rq) => $rq->where('office_id', $user->office_id));
+            })
+            ->whereBetween('updated_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
+            ->orderBy('updated_at', 'desc')
+            ->get()
+            ->map(fn($doc) => [
+                'document_no' => $doc->document_no,
+                'subject' => $doc->subject,
+                'document_type' => $doc->document_type,
+                'action_type' => $doc->action_type,
+                'origin_office' => $doc->office_name,
+                'created_at' => $doc->created_at->format('Y-m-d H:i:s'),
+                'closed_at' => $doc->updated_at->format('Y-m-d H:i:s'),
+            ]);
+
+        return response()->json([
+            'success' => true,
+            'data' => $data,
+            'meta' => [
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+                'total' => $data->count(),
+            ],
+        ]);
+    }
+
+    /**
+     * GET /api/documents/released/export
+     * Export released documents data.
+     */
+    public function releasedExport(Request $request)
+    {
+        $user = $request->user();
+        $startDate = $request->input('start_date', now()->startOfMonth()->toDateString());
+        $endDate = $request->input('end_date', now()->toDateString());
+
+        $data = DocumentTransactionLog::with(['transaction.document', 'transaction.recipients'])
+            ->where('office_id', $user->office_id)
+            ->where('status', 'Released')
+            ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(fn($log) => [
+                'document_no' => $log->document_no,
+                'transaction_no' => $log->transaction_no,
+                'subject' => $log->transaction?->subject ?? '',
+                'document_type' => $log->transaction?->document_type ?? '',
+                'action_type' => $log->transaction?->action_type ?? '',
+                'routing' => $log->transaction?->routing ?? '',
+                'recipients' => $log->transaction?->recipients->where('recipient_type', 'default')->pluck('office_name')->implode(', ') ?? '',
+                'released_at' => $log->created_at->format('Y-m-d H:i:s'),
+                'status' => $log->transaction?->status ?? '',
+            ]);
+
+        return response()->json([
+            'success' => true,
+            'data' => $data,
+            'meta' => [
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+                'total' => $data->count(),
+            ],
+        ]);
+    }
 }

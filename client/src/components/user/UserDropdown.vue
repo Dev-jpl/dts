@@ -63,7 +63,7 @@ function logout() {
             </RouterLink>
           </li>
           <li>
-            <RouterLink :to="{ name: 'user-settings' }" class="block px-4 py-2 hover:bg-gray-100">
+            <RouterLink :to="{ name: 'settings-profile' }" class="block px-4 py-2 hover:bg-gray-100">
               Settings
             </RouterLink>
           </li>

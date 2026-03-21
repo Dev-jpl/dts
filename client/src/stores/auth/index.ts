@@ -1,10 +1,9 @@
 // stores/useAuthStore.ts
 import { defineStore } from 'pinia'
 import axios from 'axios'
+import API from '@/api';
 
-const API = axios.create({
-  baseURL: 'http://127.0.0.1:8000/api',
-})
+
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -18,7 +17,7 @@ export const useAuthStore = defineStore('auth', {
         const { data } = await API.post('/login', { email, password })
 
         console.log(data);
-        
+
         this.token = data.access_token
         this.user = data.user
 

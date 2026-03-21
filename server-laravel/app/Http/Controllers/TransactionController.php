@@ -51,6 +51,10 @@ class TransactionController extends Controller
                 'document_type'   => $payload['documentType']['code'],
                 'action_type'     => $payload['actionTaken']['action'],
                 'origin_type'     => $payload['originType'],
+                'sender'          => $payload['sender'] ?? null,
+                'sender_position' => $payload['sender_position'] ?? null,
+                'sender_office'   => $payload['sender_office'] ?? null,
+                'sender_email'    => $payload['sender_email'] ?? null,
                 'subject'         => $payload['subject'],
                 'remarks'         => $payload['remarks'],
                 'status'          => 'Draft',
@@ -115,29 +119,69 @@ class TransactionController extends Controller
             );
 
             foreach ($allFiles as $file) {
-                $tempPath      = $file['temp_path'];
-                $filename      = basename($tempPath);
-                $permanentPath = "transactions/{$transactionNo}/{$filename}";
+                $officeFileId = null;
 
-                if (Storage::disk('public')->exists($tempPath)) {
-                    Storage::disk('public')->move($tempPath, $permanentPath);
+                // Repository file — copy from files storage to transaction storage
+                if (($file['source'] ?? 'upload') === 'repository' && !empty($file['office_file_id'])) {
+                    $repoFile = \App\Models\OfficeFile::forOffice($user->office_id)
+                        ->find($file['office_file_id']);
+
+                    if (!$repoFile) {
+                        continue; // skip if file not found or not owned
+                    }
+
+                    $extension     = pathinfo($repoFile->original_name, PATHINFO_EXTENSION);
+                    $filename      = Str::uuid()->toString() . '.' . $extension;
+                    $permanentPath = "transactions/{$transactionNo}/{$filename}";
+
+                    // Copy file from local files storage to public transaction storage
+                    $sourcePath = Storage::disk('local')->path($repoFile->file_path);
+                    if (file_exists($sourcePath)) {
+                        Storage::disk('public')->put($permanentPath, file_get_contents($sourcePath));
+                    }
+
+                    $officeFileId = $repoFile->id;
+
+                    DocumentAttachment::create([
+                        'document_no'     => $documentNo,
+                        'transaction_no'  => $transactionNo,
+                        'file_name'       => $repoFile->original_name,
+                        'file_path'       => $permanentPath,
+                        'mime_type'       => $repoFile->mime_type,
+                        'file_size'       => $repoFile->file_size,
+                        'attachment_type' => $file['attachment_type'],
+                        'office_file_id'  => $officeFileId,
+                        'office_id'       => $user->office_id,
+                        'office_name'     => $user->office_name,
+                        'created_by_id'   => $user->id,
+                        'created_by_name' => $user->fullName(),
+                    ]);
                 } else {
-                    $permanentPath = $tempPath;
-                }
+                    // Standard upload from temp storage
+                    $tempPath      = $file['temp_path'];
+                    $filename      = basename($tempPath);
+                    $permanentPath = "transactions/{$transactionNo}/{$filename}";
 
-                DocumentAttachment::create([
-                    'document_no'     => $documentNo,
-                    'transaction_no'  => $transactionNo,
-                    'file_name'       => $file['name'],
-                    'file_path'       => $permanentPath,
-                    'mime_type'       => $file['type'],
-                    'file_size'       => $file['size_bytes'],
-                    'attachment_type' => $file['attachment_type'],
-                    'office_id'       => $user->office_id,
-                    'office_name'     => $user->office_name,
-                    'created_by_id'   => $user->id,
-                    'created_by_name' => $user->fullName(),
-                ]);
+                    if (Storage::disk('public')->exists($tempPath)) {
+                        Storage::disk('public')->move($tempPath, $permanentPath);
+                    } else {
+                        $permanentPath = $tempPath;
+                    }
+
+                    DocumentAttachment::create([
+                        'document_no'     => $documentNo,
+                        'transaction_no'  => $transactionNo,
+                        'file_name'       => $file['name'],
+                        'file_path'       => $permanentPath,
+                        'mime_type'       => $file['type'],
+                        'file_size'       => $file['size_bytes'],
+                        'attachment_type' => $file['attachment_type'],
+                        'office_id'       => $user->office_id,
+                        'office_name'     => $user->office_name,
+                        'created_by_id'   => $user->id,
+                        'created_by_name' => $user->fullName(),
+                    ]);
+                }
             }
 
             // Profiled log
@@ -166,6 +210,7 @@ class TransactionController extends Controller
                 'data'    => [
                     'document_no'    => $documentNo,
                     'transaction_no' => $transactionNo,
+                    'qr_code'        => $qrCode,
                 ],
             ], 201);
 
@@ -235,8 +280,13 @@ class TransactionController extends Controller
     public function releaseDocument(Request $request, string $trxNo): JsonResponse
     {
         $validated = $request->validate([
-            'remarks'       => 'nullable|string|max:255',
-            'routed_office' => 'nullable|array',
+            'remarks'                      => 'nullable|string|max:255',
+            'routing'                      => 'nullable|in:Single,Multiple,Sequential',
+            'recipients'                   => 'nullable|array|min:1',
+            'recipients.*.office_code'     => 'required_with:recipients|string',
+            'recipients.*.office'          => 'required_with:recipients|string',
+            'recipients.*.recipient_type'  => 'nullable|string|in:default,cc,bcc',
+            'recipients.*.sequence'        => 'nullable|integer',
         ]);
 
         $user        = $request->user();
@@ -247,25 +297,59 @@ class TransactionController extends Controller
             return response()->json(['success' => false, 'message' => 'Transaction not found.'], 404);
         }
 
+        if ($transaction->status !== 'Draft') {
+            return response()->json(['success' => false, 'message' => 'Only draft documents can be released.'], 422);
+        }
+
         if ($transaction->logs->where('status', 'Released')->isNotEmpty()) {
             return response()->json(['success' => false, 'message' => 'Document has already been released.'], 409);
         }
 
         DB::transaction(function () use ($trxNo, $transaction, $validated, $user) {
-            DocumentTransactionLog::create([
-                'transaction_no'          => $trxNo,
-                'document_no'             => $transaction->document_no,
-                'status'                  => 'Released',
-                'action_taken'            => $transaction->action_type,
-                'activity'                => "Document released by {$user->office_name}",
-                'remarks'                 => $validated['remarks'] ?? null,
-                'assigned_personnel_id'   => $user->id,
-                'assigned_personnel_name' => $user->fullName(),
-                'office_id'               => $user->office_id,
-                'office_name'             => $user->office_name,
-                'routed_office_id'        => $validated['routed_office']['id'] ?? null,
-                'routed_office_name'      => $validated['routed_office']['office_name'] ?? null,
-            ]);
+            // Update routing if provided
+            if (!empty($validated['routing'])) {
+                $transaction->update(['routing' => $validated['routing']]);
+            }
+
+            // Replace recipients if provided
+            if (!empty($validated['recipients'])) {
+                DocumentRecipient::where('transaction_no', $trxNo)->delete();
+
+                foreach ($validated['recipients'] as $recipient) {
+                    DocumentRecipient::create([
+                        'document_no'     => $transaction->document_no,
+                        'transaction_no'  => $trxNo,
+                        'recipient_type'  => $recipient['recipient_type'] ?? 'default',
+                        'office_id'       => $recipient['office_code'],
+                        'office_name'     => $recipient['office'],
+                        'sequence'        => $recipient['sequence'] ?? 1,
+                        'created_by_id'   => $user->id,
+                        'created_by_name' => $user->fullName(),
+                        'isActive'        => true,
+                    ]);
+                }
+            }
+
+            // Refresh recipients after potential replacement
+            $transaction->load('recipients');
+
+            // Create a Released log for EACH recipient so they appear in their incoming queue
+            foreach ($transaction->recipients as $recipient) {
+                DocumentTransactionLog::create([
+                    'transaction_no'          => $trxNo,
+                    'document_no'             => $transaction->document_no,
+                    'status'                  => 'Released',
+                    'action_taken'            => $transaction->action_type,
+                    'activity'                => "Document released to {$recipient->office_name} by {$user->office_name}",
+                    'remarks'                 => $validated['remarks'] ?? null,
+                    'assigned_personnel_id'   => $user->id,
+                    'assigned_personnel_name' => $user->fullName(),
+                    'office_id'               => $user->office_id,
+                    'office_name'             => $user->office_name,
+                    'routed_office_id'        => $recipient->office_id,
+                    'routed_office_name'      => $recipient->office_name,
+                ]);
+            }
 
             $transaction->update(['status' => 'Processing']);
             $transaction->document->update(['status' => 'Active']);
@@ -332,6 +416,17 @@ class TransactionController extends Controller
 
         if (!$targetRecipient) {
             return response()->json(['success' => false, 'message' => 'Target office is not a registered recipient on this transaction.'], 422);
+        }
+
+        // Guard: no duplicate subsequent release from this office (check for Released log with office_id match)
+        $hasSubsequentlyReleased = $transaction->logs
+            ->where('office_id', $user->office_id)
+            ->where('status', 'Released')
+            ->whereNotNull('routed_office_id')
+            ->isNotEmpty();
+
+        if ($hasSubsequentlyReleased) {
+            return response()->json(['success' => false, 'message' => 'Your office has already performed a subsequent release on this document.'], 409);
         }
 
         DB::transaction(function () use ($trxNo, $transaction, $validated, $user) {
@@ -426,7 +521,10 @@ class TransactionController extends Controller
         }
 
         $receivedLog = null;
-        DB::transaction(function () use ($trxNo, $transaction, $validated, $user, $recipient, &$receivedLog) {
+        $actionLib = ActionLibrary::where('name', $transaction->action_type)->first();
+        $isFI = $actionLib?->type === 'FI';
+
+        DB::transaction(function () use ($trxNo, $transaction, $validated, $user, $recipient, &$receivedLog, $isFI) {
             $receivedLog = DocumentTransactionLog::create([
                 'transaction_no'          => $trxNo,
                 'document_no'             => $transaction->document_no,
@@ -442,14 +540,42 @@ class TransactionController extends Controller
                 'routed_office_name'      => null,
             ]);
 
+            // For FI documents, auto-mark as Done on receive (default recipients only)
+            if ($isFI && $recipient->recipient_type === 'default') {
+                DocumentTransactionLog::create([
+                    'transaction_no'          => $trxNo,
+                    'document_no'             => $transaction->document_no,
+                    'status'                  => 'Done',
+                    'action_taken'            => $transaction->action_type,
+                    'activity'                => "Auto-completed (For Information) by {$user->office_name}",
+                    'remarks'                 => null,
+                    'assigned_personnel_id'   => $user->id,
+                    'assigned_personnel_name' => $user->fullName(),
+                    'office_id'               => $user->office_id,
+                    'office_name'             => $user->office_name,
+                ]);
+
+                // Recipient steps out
+                DocumentRecipient::where('transaction_no', $trxNo)
+                    ->where('office_id', $user->office_id)
+                    ->update(['isActive' => false]);
+            }
+
             TransactionStatusService::evaluate($trxNo);
         });
 
         NotificationService::onReceive($receivedLog);
 
+        // Also notify Done for FI auto-completion
+        if ($isFI && $recipient->recipient_type === 'default') {
+            NotificationService::onMarkAsDone($transaction, $user->office_id, $user->office_name);
+        }
+
         return response()->json([
             'success' => true,
-            'message' => 'Document received successfully.',
+            'message' => $isFI && $recipient->recipient_type === 'default' 
+                ? 'Document received and marked as done (For Information).'
+                : 'Document received successfully.',
             'data'    => $transaction->refresh()->load(['document', 'recipients', 'signatories', 'attachments', 'logs']),
         ]);
     }
@@ -1074,6 +1200,48 @@ class TransactionController extends Controller
         ]);
 
         return response()->json(['success' => true, 'data' => $comment], 201);
+    }
+
+    public function destroyDraft(Request $request, string $trxNo): JsonResponse
+    {
+        $user        = $request->user();
+        $transaction = DocumentTransaction::with(['document', 'recipients', 'logs', 'attachments', 'signatories'])
+            ->where('transaction_no', $trxNo)->first();
+
+        if (!$transaction) {
+            return response()->json(['success' => false, 'message' => 'Transaction not found.'], 404);
+        }
+
+        if ($transaction->status !== 'Draft') {
+            return response()->json(['success' => false, 'message' => 'Only draft documents can be deleted.'], 422);
+        }
+
+        if ($transaction->office_id !== $user->office_id) {
+            return response()->json(['success' => false, 'message' => 'Not authorized.'], 403);
+        }
+
+        DB::transaction(function () use ($transaction) {
+            $docNo = $transaction->document_no;
+
+            // Delete related records
+            DocumentRecipient::where('transaction_no', $transaction->transaction_no)->delete();
+            DocumentTransactionLog::where('transaction_no', $transaction->transaction_no)->delete();
+            DocumentSignatory::where('transaction_no', $transaction->transaction_no)->delete();
+            DocumentAttachment::where('transaction_no', $transaction->transaction_no)->delete();
+
+            $transaction->delete();
+
+            // Delete document if no other transactions reference it
+            $remaining = DocumentTransaction::where('document_no', $docNo)->count();
+            if ($remaining === 0) {
+                Document::where('document_no', $docNo)->delete();
+            }
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Draft document deleted successfully.',
+        ]);
     }
 
     public function tempUpload(Request $request): JsonResponse

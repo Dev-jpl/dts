@@ -30,9 +30,17 @@ return [
     //     '127.0.0.1:5173'
     // ],
 
-    'allowed_origins' => ['http://127.0.0.1:5173'],
+    'allowed_origins' => [
+        'http://127.0.0.1:5173',
+        'http://localhost:5173',
+        'http://172.17.150.248:5173',
+    ],
 
-    'allowed_origins_patterns' => [],
+    'allowed_origins_patterns' => [
+        '/^http:\/\/172\.\d+\.\d+\.\d+:\d+$/',   // Allow all 172.x.x.x IPs
+        '/^http:\/\/192\.168\.\d+\.\d+:\d+$/',  // Allow all 192.168.x.x IPs
+        '/^http:\/\/10\.\d+\.\d+\.\d+:\d+$/',   // Allow all 10.x.x.x IPs
+    ],
 
     'allowed_headers' => ['*'],
 

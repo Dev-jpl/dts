@@ -88,7 +88,6 @@ export function useDocumentInformation() {
                 size: formatSize(file.size ?? 0),
                 size_bytes: file.size ?? 0,
                 type: file.mime_type ?? 'application/octet-stream',
-                url: file.url ?? '',
                 temp_path: file.temp_path ?? '',
             }));
     }

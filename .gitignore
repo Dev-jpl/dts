@@ -82,3 +82,19 @@ coverage/
 #Documentations
 .pdf
 .docs
+
+################################
+# SERVICES (Python, Embedding)
+################################
+/services/embedding/.venv/
+/services/embedding/__pycache__/
+/services/embedding/*.pyc
+/services/embedding/.mypy_cache/
+/services/embedding/.pytest_cache/
+/services/embedding/.env
+/services/embedding/.env.*
+/services/embedding/.DS_Store
+/services/embedding/.dockerignore
+/services/embedding/Dockerfile
+/services/embedding/requirements.txt
+/services/embedding/*.log

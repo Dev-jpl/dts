@@ -91,8 +91,8 @@ export interface TabCounts {
 export const INCOMING_TABS: { key: IncomingTab; label: string; endpoint: string }[] = [
     { key: 'all',         label: 'All',         endpoint: '/incoming' },
     { key: 'for_action',  label: 'For Action',  endpoint: '/incoming/for-action' },
-    { key: 'overdue',     label: 'Overdue',     endpoint: '/incoming/overdue' },
     { key: 'in_progress', label: 'In Progress', endpoint: '/incoming/in-progress' },
+    { key: 'overdue',     label: 'Overdue',     endpoint: '/incoming/overdue' },
     { key: 'completed',   label: 'Completed',   endpoint: '/incoming/completed' },
     { key: 'closed',      label: 'Closed',      endpoint: '/incoming/closed' },
 ]
